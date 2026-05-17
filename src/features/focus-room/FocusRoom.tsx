@@ -43,7 +43,9 @@ export const FocusRoom: React.FC = () => {
     addXP,
     activeFocusSession,
     ambientSound,
-    setAmbientSound
+    setAmbientSound,
+    events,
+    resolveEvent
   } = useStore();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -68,13 +70,20 @@ export const FocusRoom: React.FC = () => {
         addFocusTime(25);
         addXP(500);
         setTimerState(false);
+        
+        // Mark the active focus session in planner as completed
+        const activeEvent = events.find(e => e.status === 'active' && e.type === 'focus');
+        if (activeEvent) {
+          resolveEvent(activeEvent.id, 'completed');
+        }
+
         alert("Deep Focus Session Complete! +500 XP Gained.");
       }
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isTimerRunning, tickTimer, pomodoroTime, addFocusTime, addXP, setTimerState]);
+  }, [isTimerRunning, tickTimer, pomodoroTime, addFocusTime, addXP, setTimerState, events, resolveEvent]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {

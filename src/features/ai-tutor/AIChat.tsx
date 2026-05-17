@@ -4,7 +4,7 @@ import { useStore } from '../../store';
 import { Send, Bot, User, Sparkles, Brain, Book, Command, Mic, History, Settings } from 'lucide-react';
 
 export const AIChat: React.FC = () => {
-  const { chatHistory, sendMessage } = useStore();
+  const { chatHistory, sendMessage, addAssistantMessage, tasks, exams, courses, notes } = useStore();
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -15,8 +15,29 @@ export const AIChat: React.FC = () => {
     }
   }, [chatHistory, isTyping]);
 
+  const generateContextualResponse = (userQuery: string) => {
+    const query = userQuery.toLowerCase();
+    
+    if (query.includes('exam') || query.includes('test')) {
+      const nextExam = exams[0];
+      return `I've analyzed your temporal engine. You have a ${nextExam.title} for ${courses.find(c => c.id === nextExam.courseId)?.code} on ${nextExam.date}. Based on your current mastery of 89%, I recommend 2 deep focus sessions this week.`;
+    }
+    
+    if (query.includes('task') || query.includes('todo')) {
+      const urgentTasks = tasks.filter(t => !t.completed && t.urgency === 'URGENT');
+      return `You have ${urgentTasks.length} urgent tactical nodes pending. The high-priority task is "${urgentTasks[0]?.title}". Shall we initiate a focus stream?`;
+    }
+
+    if (query.includes('grade') || query.includes('performance')) {
+      return `Your cumulative GPA trajectory is currently 3.82. Your strongest node is Physics (94%), but Discrete Structures is showing a 12% retention decay. Recommend syllabus injection.`;
+    }
+
+    return "Neural Assistant synchronized. I'm monitoring your academic trajectory across all modules. How can I optimize your flow?";
+  };
+
   const handleSend = () => {
     if (!input.trim()) return;
+    const userMsg = input;
     sendMessage(input);
     setInput('');
     setIsTyping(true);
@@ -24,7 +45,9 @@ export const AIChat: React.FC = () => {
     // Premium simulated response delay
     setTimeout(() => {
       setIsTyping(false);
-    }, 2000);
+      const response = generateContextualResponse(userMsg);
+      addAssistantMessage(response);
+    }, 1500);
   };
 
   return (

@@ -30,26 +30,30 @@ interface SidebarProps {
   isCollapsed: boolean;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
+export const Sidebar: React.FC<SidebarProps> = React.memo(({ isCollapsed }) => {
   const location = useLocation();
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 
   const menuItems = [
-    { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: t('common.dashboard') },
-    { path: '/planner', icon: <CalendarIcon size={20} />, label: t('common.planner') },
-    { path: '/calendar', icon: <CalendarIcon size={20} />, label: t('common.calendar') },
-    { path: '/courses', icon: <Layers size={20} />, label: t('common.courses') },
-    { path: '/tasks', icon: <ChevronRight size={20} />, label: t('common.tasks') },
-    { path: '/tutor', icon: <MessageCircleCode size={20} />, label: t('common.tutor') },
-    { path: '/focus', icon: <Timer size={20} />, label: t('common.focus') },
-    { path: '/notes', icon: <FileText size={20} />, label: t('common.notes') },
-    { path: '/exams', icon: <Zap size={20} />, label: t('common.exams') },
-    { path: '/achievements', icon: <Trophy size={20} />, label: t('common.achievements') },
-    { path: '/leaderboards', icon: <BarChart2 size={20} />, label: t('common.leaderboards') },
-    { path: '/social', icon: <Users size={20} />, label: t('common.social') },
-    { path: '/analytics', icon: <PieChart size={20} />, label: t('common.analytics') },
-  ];
+  { path: '/dashboard', icon: <LayoutDashboard size={20} />, labelKey: 'common.dashboard', component: () => import('../../features/dashboard/AdaptiveHome') },
+  { path: '/planner', icon: <CalendarIcon size={20} />, labelKey: 'common.planner', component: () => import('../../features/planner/DynamicPlanner') },
+  { path: '/calendar', icon: <CalendarIcon size={20} />, labelKey: 'common.calendar', component: () => import('../../pages/CalendarPage') },
+  { path: '/courses', icon: <Layers size={20} />, labelKey: 'common.courses', component: () => import('../../features/matrix/AcademicMatrix') },
+  { path: '/tasks', icon: <ChevronRight size={20} />, labelKey: 'common.tasks', component: () => import('../../features/tasks/SmartTaskSystem') },
+  { path: '/tutor', icon: <MessageCircleCode size={20} />, labelKey: 'common.tutor', component: () => import('../../features/ai/AIStudyAssistant') },
+  { path: '/focus', icon: <Timer size={20} />, labelKey: 'common.focus', component: () => import('../../features/focus-room/FocusRoom') },
+  { path: '/notes', icon: <FileText size={20} />, labelKey: 'common.notes', component: () => import('../../pages/NotesPage') },
+  { path: '/exams', icon: <Zap size={20} />, labelKey: 'common.exams', component: () => import('../../features/exams/ExamMode') },
+  { path: '/achievements', icon: <Trophy size={20} />, labelKey: 'common.achievements', component: () => import('../../features/gamification/AchievementSystem') },
+  { path: '/leaderboards', icon: <BarChart2 size={20} />, labelKey: 'common.leaderboards', component: () => import('../../pages/LeaderboardPage') },
+  { path: '/social', icon: <Users size={20} />, labelKey: 'common.social', component: () => import('../../features/social/StudySocial') },
+  { path: '/analytics', icon: <PieChart size={20} />, labelKey: 'common.analytics', component: () => import('../../features/analytics/NeuralAnalytics') },
+];
+
+  const prefetch = React.useCallback((component: () => Promise<any>) => {
+    component();
+  }, []);
 
   return (
     <TooltipProvider>
@@ -111,6 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
                 <TooltipTrigger asChild>
                   <NavLink
                     to={item.path}
+                    onMouseEnter={() => prefetch(item.component)}
                     className={({ isActive }) => cn(
                       "flex items-center gap-4 h-12 rounded-2xl transition-all duration-300 relative group px-3",
                       isActive 
@@ -130,7 +135,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
                          "text-sm font-black uppercase tracking-widest truncate",
                          isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
                        )}>
-                         {item.label}
+                         {t(item.labelKey)}
                        </span>
                     )}
                     {isActive && !isCollapsed && (
@@ -144,7 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
                     )}
                   </NavLink>
                 </TooltipTrigger>
-                {isCollapsed && <TooltipContent side="right" className="font-black uppercase text-[10px] tracking-widest">{item.label}</TooltipContent>}
+                {isCollapsed && <TooltipContent side="right" className="font-black uppercase text-[10px] tracking-widest">{t(item.labelKey)}</TooltipContent>}
               </Tooltip>
             );
           })}
@@ -210,4 +215,4 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
       </aside>
     </TooltipProvider>
   );
-};
+});

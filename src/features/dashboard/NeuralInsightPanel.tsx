@@ -96,14 +96,18 @@ const InsightCard: React.FC<{ insight: NeuralInsight; onDismiss: (id: string) =>
   );
 };
 
-export const NeuralInsightPanel: React.FC = () => {
-  const { neuralInsights, dismissInsight, aiActivityStatus, setAIStatus } = useStore();
-  const active = neuralInsights.filter(i => !i.dismissed);
+export const NeuralInsightPanel: React.FC = React.memo(() => {
+  const neuralInsights = useStore(state => state.neuralInsights);
+  const dismissInsight = useStore(state => state.dismissInsight);
+  const aiActivityStatus = useStore(state => state.aiActivityStatus);
+  const setAIStatus = useStore(state => state.setAIStatus);
 
-  const handleRefresh = () => {
+  const active = React.useMemo(() => neuralInsights.filter(i => !i.dismissed), [neuralInsights]);
+
+  const handleRefresh = React.useCallback(() => {
     setAIStatus('analyzing');
     setTimeout(() => setAIStatus('active'), 2000);
-  };
+  }, [setAIStatus]);
 
   return (
     <div className="space-y-4">
@@ -155,4 +159,4 @@ export const NeuralInsightPanel: React.FC = () => {
       </AnimatePresence>
     </div>
   );
-};
+});

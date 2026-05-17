@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../store';
 import { 
@@ -15,7 +15,8 @@ import {
   FileText,
   AlertCircle,
   Eye,
-  Info
+  Info,
+  X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,13 +26,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 
 export const ExamMode: React.FC = () => {
-  const { addXP } = useStore();
+  const { addXP, pushToast, courses } = useStore();
   const [activeTab, setActiveTab] = useState<'flashcards' | 'mock'>('flashcards');
   const [currentCard, setCurrentCard] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [flaggedQuestions, setFlaggedQuestions] = useState<number[]>([]);
   const [currentMockQuestion, setCurrentMockQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [isFocusLockActive, setIsFocusLockActive] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   const mockFlashcards = [
     { q: "What is Kirchhoff's Current Law?", a: "The algebraic sum of currents entering a node is zero." },
@@ -50,7 +53,11 @@ export const ExamMode: React.FC = () => {
       options: ['Norton Theorem', 'Thevenin Theorem', 'Superposition', 'Millman Theorem'],
       hint: "Focus on voltage source equivalence."
     },
-    // ... more would be here
+    {
+      q: "Calculate the total resistance in a parallel circuit with resistors of 10Ω, 20Ω, and 30Ω.",
+      options: ['5.45Ω', '60Ω', '6.67Ω', '15Ω'],
+      hint: "Use the reciprocal formula: 1/Rt = 1/R1 + 1/R2 + 1/R3"
+    }
   ];
 
   const handleNextCard = () => {
@@ -74,9 +81,140 @@ export const ExamMode: React.FC = () => {
     );
   };
 
+  const handleFinishSimulation = () => {
+    setIsFocusLockActive(false);
+    setShowReport(true);
+    addXP(1000);
+    pushToast({
+      type: 'success',
+      title: 'Simulation Decrypted',
+      body: 'Performance report generated. +1000 XP gained.'
+    });
+  };
+
+  const toggleFocusLock = () => {
+    setIsFocusLockActive(!isFocusLockActive);
+    if (!isFocusLockActive) {
+      pushToast({
+        type: 'focus',
+        title: 'Focus Lock Engaged',
+        body: 'Distraction-free neural environment active.'
+      });
+    }
+  };
+
   return (
     <TooltipProvider>
-      <div className="space-y-8 max-w-7xl mx-auto pb-20">
+      <div className={cn("space-y-8 max-w-7xl mx-auto pb-20 transition-all duration-700", isFocusLockActive && "scale-105 blur-none opacity-100")}>
+        
+        {/* Fullscreen Focus Lock Overlay */}
+        {isFocusLockActive && (
+          <div className="fixed inset-0 z-[600] bg-background/95 backdrop-blur-2xl flex flex-col p-10 overflow-auto">
+             <div className="flex justify-between items-center mb-10">
+                <Badge variant="outline" className="text-destructive border-destructive/50 bg-destructive/10 animate-pulse px-6 py-2 rounded-full font-black tracking-widest">
+                   FOCUS LOCK ACTIVE // NO ESCAPE PROTOCOL
+                </Badge>
+                <div className="text-4xl font-black tabular-nums text-foreground">42:15</div>
+                <Button variant="outline" onClick={toggleFocusLock} className="border-border/50 font-black uppercase text-[10px] tracking-widest">ABORT SIMULATION</Button>
+             </div>
+             
+             <div className="max-w-4xl mx-auto w-full flex-1 flex flex-col justify-center">
+                <Card className="border-border/50 bg-card/50 p-10 space-y-10 shadow-2xl relative overflow-hidden">
+                   <div className="absolute top-0 left-0 w-full h-1 bg-destructive/30" />
+                   <div className="space-y-4">
+                      <Badge className="bg-destructive text-white font-black uppercase tracking-widest">QUESTION {currentMockQuestion + 1} / 20</Badge>
+                      <h2 className="text-4xl font-black leading-tight text-foreground">
+                         {mockQuestions[currentMockQuestion % mockQuestions.length].q}
+                      </h2>
+                   </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {mockQuestions[currentMockQuestion % mockQuestions.length].options.map((opt, i) => (
+                        <Button 
+                          key={i} 
+                          variant="outline" 
+                          onClick={() => setAnswers(prev => ({ ...prev, [currentMockQuestion]: opt }))}
+                          className={cn(
+                            "h-24 justify-start px-10 rounded-3xl border-2 transition-all text-xl font-bold gap-8",
+                            answers[currentMockQuestion] === opt ? 
+                            "bg-destructive/10 border-destructive text-destructive shadow-[0_0_30px_rgba(239,68,68,0.2)]" : 
+                            "border-border/50 bg-background hover:bg-destructive/5"
+                          )}
+                        >
+                           <span className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-sm font-black">{String.fromCharCode(65 + i)}</span>
+                           {opt}
+                        </Button>
+                      ))}
+                   </div>
+                   <div className="flex justify-between items-center pt-10 border-t border-border/30">
+                      <Button variant="ghost" className="text-lg font-black uppercase tracking-widest gap-2" onClick={() => setCurrentMockQuestion(q => Math.max(0, q - 1))}>
+                         <ChevronLeft /> Previous
+                      </Button>
+                      <Button className="h-16 px-12 bg-destructive text-white text-lg font-black uppercase tracking-[0.2em] rounded-2xl shadow-2xl shadow-destructive/20 transition-all hover:scale-105 active:scale-95" onClick={() => {
+                        if (currentMockQuestion === 19) handleFinishSimulation();
+                        else setCurrentMockQuestion(q => q + 1);
+                      }}>
+                         {currentMockQuestion === 19 ? 'TERMINATE & ANALYZE' : 'NEXT NODE'} <ChevronRight className="ml-2" />
+                      </Button>
+                   </div>
+                </Card>
+             </div>
+          </div>
+        )}
+
+        {/* Performance Report Modal */}
+        <AnimatePresence>
+          {showReport && (
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[700] bg-black/90 backdrop-blur-3xl flex items-center justify-center p-6"
+            >
+               <motion.div 
+                 initial={{ scale: 0.9, y: 50 }} animate={{ scale: 1, y: 0 }}
+                 className="glass-panel p-16 max-w-3xl w-full relative overflow-hidden bg-card border border-border rounded-[40px] shadow-[0_0_100px_rgba(239,68,68,0.2)]"
+               >
+                  <div className="relative z-10 space-y-10">
+                     <div className="flex justify-between items-center">
+                        <div>
+                           <h2 className="text-5xl font-black heading-os">DIAGNOSTIC REPORT</h2>
+                           <p className="text-primary font-bold mt-2 uppercase tracking-widest">Simulation: Digital Logic II</p>
+                        </div>
+                        <div className="text-right">
+                           <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Mastery Sync</p>
+                           <p className="text-5xl font-black text-emerald-500">92%</p>
+                        </div>
+                     </div>
+                     
+                     <div className="grid grid-cols-3 gap-6">
+                        <Card className="bg-muted/30 p-6 space-y-2 border-none">
+                           <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Time Efficiency</p>
+                           <p className="text-2xl font-black">94.2%</p>
+                        </Card>
+                        <Card className="bg-muted/30 p-6 space-y-2 border-none">
+                           <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Accuracy Node</p>
+                           <p className="text-2xl font-black">18/20</p>
+                        </Card>
+                        <Card className="bg-muted/30 p-6 space-y-2 border-none">
+                           <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Neural Load</p>
+                           <p className="text-2xl font-black text-amber-500">PEAK</p>
+                        </Card>
+                     </div>
+
+                     <div className="space-y-4">
+                        <p className="text-sm font-medium text-muted-foreground italic border-l-4 border-primary pl-6 py-2">
+                           "AI Observation: You excelled in Boolean Algebra but showed hesitation in Sequential Circuit timing diagrams. Recommend a targeted focus session on Flip-Flops."
+                        </p>
+                     </div>
+
+                     <Button onClick={() => setShowReport(false)} className="w-full h-16 text-lg font-black uppercase tracking-widest rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/20">
+                        ACKNOWLEDGE & PERSIST XP
+                     </Button>
+                  </div>
+                  <button onClick={() => setShowReport(false)} className="absolute top-8 right-8 text-muted-foreground hover:text-foreground transition-colors"><X size={24} /></button>
+               </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
           <div className="space-y-4">
             <Badge variant="secondary" className="px-4 py-1 rounded-full bg-destructive/10 text-destructive border-destructive/20 gap-2">
@@ -200,7 +338,6 @@ export const ExamMode: React.FC = () => {
                      className="space-y-8"
                    >
                       <Card className="border-destructive/20 bg-background/50 backdrop-blur-xl relative overflow-hidden">
-                         {/* Subtle Neural Pulse Effect */}
                          <div className="absolute top-0 left-0 w-full h-1 bg-destructive/20 overflow-hidden">
                             <motion.div 
                               animate={{ x: ['-100%', '100%'] }}
@@ -210,7 +347,6 @@ export const ExamMode: React.FC = () => {
                          </div>
 
                          <CardContent className="p-0">
-                            {/* Simulator Toolbar */}
                             <div className="p-6 border-b border-border/50 flex justify-between items-center bg-muted/20">
                                <div className="flex items-center gap-6">
                                   <div className="space-y-1">
@@ -225,14 +361,6 @@ export const ExamMode: React.FC = () => {
                                   </div>
                                </div>
                                <div className="flex items-center gap-4">
-                                  <Tooltip>
-                                     <TooltipTrigger asChild>
-                                        <Button variant="outline" size="icon" className="w-10 h-10 border-border/50 rounded-xl hover:text-destructive">
-                                           <AlertCircle size={18} />
-                                        </Button>
-                                     </TooltipTrigger>
-                                     <TooltipContent>Report Simulation Error</TooltipContent>
-                                  </Tooltip>
                                   <div className="px-6 py-2 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive flex items-center gap-3">
                                      <Clock size={18} className="animate-pulse" />
                                      <span className="text-xl font-black tabular-nums">42:15</span>
@@ -248,12 +376,12 @@ export const ExamMode: React.FC = () => {
                                         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Weight: 15 Points</span>
                                      </div>
                                      <h3 className="text-2xl font-bold text-foreground leading-relaxed">
-                                        {mockQuestions[currentMockQuestion].q}
+                                        {mockQuestions[currentMockQuestion % mockQuestions.length].q}
                                      </h3>
                                      
                                      <div className="flex items-center gap-3 text-destructive/60 bg-destructive/5 p-4 rounded-xl border border-destructive/10">
                                         <Info size={16} />
-                                        <p className="text-xs font-bold uppercase tracking-wide">AI Tip: {mockQuestions[currentMockQuestion].hint}</p>
+                                        <p className="text-xs font-bold uppercase tracking-wide">AI Tip: {mockQuestions[currentMockQuestion % mockQuestions.length].hint}</p>
                                      </div>
                                   </div>
 
@@ -263,7 +391,7 @@ export const ExamMode: React.FC = () => {
                                         {Array.from({ length: 20 }).map((_, i) => (
                                           <button 
                                             key={i}
-                                            onClick={() => setCurrentMockQuestion(i % mockQuestions.length)}
+                                            onClick={() => setCurrentMockQuestion(i)}
                                             className={cn(
                                               "w-8 h-8 rounded-lg text-[10px] font-black flex items-center justify-center border transition-all",
                                               currentMockQuestion === i ? "bg-destructive border-destructive text-white shadow-lg shadow-destructive/20 scale-110" : 
@@ -280,7 +408,7 @@ export const ExamMode: React.FC = () => {
                                </div>
 
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {mockQuestions[currentMockQuestion].options.map((opt, i) => (
+                                  {mockQuestions[currentMockQuestion % mockQuestions.length].options.map((opt, i) => (
                                     <Button 
                                       key={i} 
                                       variant="outline" 
@@ -302,7 +430,7 @@ export const ExamMode: React.FC = () => {
 
                                <div className="flex justify-between items-center pt-8 border-t border-border/50">
                                   <div className="flex gap-4">
-                                     <Button variant="ghost" className="px-6 font-black uppercase text-[10px] tracking-widest gap-2">
+                                     <Button variant="ghost" className="px-6 font-black uppercase text-[10px] tracking-widest gap-2" onClick={() => setCurrentMockQuestion(q => Math.max(0, q - 1))}>
                                         <ChevronLeft size={16} /> Previous
                                      </Button>
                                      <Button 
@@ -321,8 +449,8 @@ export const ExamMode: React.FC = () => {
                                      <Button variant="outline" className="px-8 font-black uppercase text-[10px] tracking-widest gap-2 rounded-xl border-border/50">
                                         <FileText size={16} /> Reference Sheet
                                      </Button>
-                                     <Button className="px-10 bg-destructive hover:bg-destructive/90 text-white font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-destructive/30 h-12 rounded-xl transition-all hover:-translate-y-0.5 active:translate-y-0">
-                                        Submit & Next <ChevronRight size={16} className="ml-2" />
+                                     <Button onClick={toggleFocusLock} className="px-10 bg-destructive hover:bg-destructive/90 text-white font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-destructive/30 h-12 rounded-xl transition-all hover:-translate-y-0.5 active:translate-y-0">
+                                        Engage Focus Lock <Zap size={16} className="ml-2 fill-current" />
                                      </Button>
                                   </div>
                                </div>
@@ -385,7 +513,7 @@ export const ExamMode: React.FC = () => {
                     <Sparkles size={120} className="text-destructive" />
                  </div>
                  <CardContent className="p-10 space-y-6 relative z-10">
-                    <div className="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center text-destructive mb-2 shadow-xl shadow-destructive/10">
+                    <div className="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center text-destructive mb-2 shadow-xl shadow-primary/10">
                        <Eye size={28} className="animate-pulse" />
                     </div>
                     <div className="space-y-2">
@@ -423,5 +551,3 @@ const TrendingIndicator: React.FC<{ trend: 'up' | 'down' | 'neutral' }> = ({ tre
   if (trend === 'down') return <div className="text-destructive text-[10px] font-black flex items-center gap-1 uppercase tracking-widest">▼ Dropping</div>;
   return <div className="text-muted-foreground text-[10px] font-black flex items-center gap-1 uppercase tracking-widest">● Stable</div>;
 };
-
-

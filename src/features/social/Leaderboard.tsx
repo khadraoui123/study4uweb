@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../../store';
 import { 
@@ -17,17 +17,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
 export const Leaderboard: React.FC = () => {
   useStore();
-
-  const leaders = [
+  const [leaders, setLeaders] = useState([
     { id: '1', name: 'Alex Rivera', xp: 12400, level: 24, rank: 1, avatar: 'A' },
     { id: '2', name: 'Sarah Chen', xp: 11200, level: 22, rank: 2, avatar: 'S' },
     { id: '3', name: 'James Wilson', xp: 10800, level: 21, rank: 3, avatar: 'J' },
     { id: '4', name: 'Elena Kostic', xp: 9500, level: 19, rank: 4, avatar: 'E' },
     { id: '5', name: 'Marcus Thorne', xp: 8200, level: 16, rank: 5, avatar: 'M' },
-  ];
+  ]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLeaders(prev => {
+        const next = [...prev];
+        const idx = Math.floor(Math.random() * next.length);
+        next[idx] = { ...next[idx], xp: next[idx].xp + Math.floor(Math.random() * 50) };
+        return next.sort((a, b) => b.xp - a.xp).map((l, i) => ({ ...l, rank: i + 1 }));
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="space-y-10 max-w-7xl mx-auto pb-20">

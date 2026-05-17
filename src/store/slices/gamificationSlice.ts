@@ -20,7 +20,7 @@ export interface GamificationSlice {
   addFocusTime: (minutes: number) => void;
 }
 
-export const createGamificationSlice: StateCreator<GamificationSlice> = (set) => ({
+export const createGamificationSlice: StateCreator<any> = (set, get) => ({
   xp: 1250,
   level: 5,
   streak: 12,
@@ -30,18 +30,55 @@ export const createGamificationSlice: StateCreator<GamificationSlice> = (set) =>
     { id: '2', title: 'Deep Diver', description: 'Focus for 2 hours straight', icon: 'brain' },
     { id: '3', title: 'Exam Crusher', description: 'Score 100% on a mock exam', icon: 'award' }
   ],
-  addXP: (amount) => set((state) => {
+  addXP: (amount) => set((state: any) => {
     const newXP = state.xp + amount;
     const nextLevelXP = state.level * 1000;
     if (newXP >= nextLevelXP) {
-      return { xp: newXP - nextLevelXP, level: state.level + 1 };
+      const newLevel = state.level + 1;
+      // Use setTimeout to ensure toast is pushed after state update if needed, 
+      // but Zustand set is synchronous. However, get() inside set might be tricky.
+      // Better to calculate new state and then use it.
+      
+      setTimeout(() => {
+        get().pushToast({
+          type: 'success',
+          title: 'Neural Level Up!',
+          body: `You have ascended to Level ${newLevel}. Cognitive capacity increased.`,
+        });
+      }, 100);
+
+      return { xp: newXP - nextLevelXP, level: newLevel };
     }
     return { xp: newXP };
   }),
-  incrementStreak: () => set((state) => ({ streak: state.streak + 1 })),
-  unlockAchievement: (id) => set((state) => ({
-    achievements: state.achievements.map(a => a.id === id ? { ...a, unlockedAt: Date.now() } : a)
-  })),
-  addFocusTime: (minutes) => set((state) => ({ totalFocusTime: state.totalFocusTime + minutes }))
+  incrementStreak: () => {
+    set((state: any) => ({ streak: state.streak + 1 }));
+    get().pushToast({
+      type: 'streak',
+      title: 'Streak Maintained',
+      body: `Day ${get().streak}! Your neural consistency is impressive.`,
+    });
+  },
+  unlockAchievement: (id) => {
+    const achievement = get().achievements.find((a: any) => a.id === id);
+    if (achievement && !achievement.unlockedAt) {
+      set((state: any) => ({
+        achievements: state.achievements.map((a: any) => a.id === id ? { ...a, unlockedAt: Date.now() } : a)
+      }));
+      get().pushToast({
+        type: 'success',
+        title: 'Prestige Unlocked',
+        body: `Achievement Earned: ${achievement.title}`,
+      });
+      get().addXP(500); // Bonus XP for achievements
+    }
+  },
+  addFocusTime: (minutes) => {
+    set((state: any) => ({ totalFocusTime: state.totalFocusTime + minutes }));
+    // Check for focus-based achievements
+    if (get().totalFocusTime >= 2000 && !get().achievements.find((a: any) => a.id === '2')?.unlockedAt) {
+       get().unlockAchievement('2');
+    }
+  }
 });
 

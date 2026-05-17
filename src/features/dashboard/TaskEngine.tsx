@@ -28,35 +28,48 @@ const XPBurst: React.FC<XPBurstProps> = ({ amount, onDone }) => (
   </motion.div>
 );
 
-export const TaskEngine: React.FC = () => {
-  const { tasks, courses, toggleTask, addXP, pushToast, incrementCompletedToday } = useStore();
+export const TaskEngine: React.FC = React.memo(() => {
+  const tasks = useStore(state => state.tasks);
+  const courses = useStore(state => state.courses);
+  const toggleTask = useStore(state => state.toggleTask);
+  const addXP = useStore(state => state.addXP);
+  const pushToast = useStore(state => state.pushToast);
+  const incrementCompletedToday = useStore(state => state.incrementCompletedToday);
+
   const navigate = useNavigate();
   const [bursts, setBursts] = useState<{ id: string; amount: number }[]>([]);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [orderedTasks, setOrderedTasks] = useState(() =>
-    [...tasks]
-      .filter(t => !t.completed)
-      .sort((a, b) => {
-        const urgencyScore = { URGENT: 3, NORMAL: 2, LOW: 1 };
-        const daysA = Math.ceil((new Date(a.dueDate).getTime() - Date.now()) / 86400000);
-        const daysB = Math.ceil((new Date(b.dueDate).getTime() - Date.now()) / 86400000);
-        const scoreA = (urgencyScore[a.urgency] * 10) + (10 - Math.min(daysA, 10)) + (a.priority === 1 ? 5 : 0);
-        const scoreB = (urgencyScore[b.urgency] * 10) + (10 - Math.min(daysB, 10)) + (b.priority === 1 ? 5 : 0);
-        return scoreB - scoreA;
-      })
-  );
+  
+  const [orderedTasks, setOrderedTasks] = useState<any[]>([]);
 
-  // Sync when tasks change
+  // Sync and sort tasks efficiently
   useEffect(() => {
+    const uncompleted = tasks.filter(t => !t.completed);
     setOrderedTasks(prev => {
-      const activePrev = prev.filter(p => tasks.find(t => t.id === p.id && !t.completed));
-      const newTasks = tasks.filter(t => !t.completed && !prev.find(p => p.id === t.id));
-      return [...activePrev, ...newTasks];
+      // Preserve user drag order for existing uncompleted tasks
+      const activePrev = prev.filter(p => uncompleted.some(t => t.id === p.id));
+      // Add new tasks
+      const newTasks = uncompleted.filter(t => !prev.some(p => p.id === t.id));
+      
+      const combined = [...activePrev, ...newTasks];
+      
+      // Initial sort if prev was empty
+      if (prev.length === 0) {
+        return combined.sort((a, b) => {
+          const urgencyScore = { URGENT: 3, NORMAL: 2, LOW: 1 };
+          const daysA = Math.ceil((new Date(a.dueDate).getTime() - Date.now()) / 86400000);
+          const daysB = Math.ceil((new Date(b.dueDate).getTime() - Date.now()) / 86400000);
+          const scoreA = (urgencyScore[a.urgency as keyof typeof urgencyScore] * 10) + (10 - Math.min(daysA, 10)) + (a.priority === 1 ? 5 : 0);
+          const scoreB = (urgencyScore[b.urgency as keyof typeof urgencyScore] * 10) + (10 - Math.min(daysB, 10)) + (b.priority === 1 ? 5 : 0);
+          return scoreB - scoreA;
+        });
+      }
+      return combined;
     });
   }, [tasks]);
 
-  const handleComplete = (taskId: string, xpValue: number) => {
+  const handleComplete = React.useCallback((taskId: string, xpValue: number) => {
     if (completedIds.has(taskId)) return;
     setCompletedIds(prev => new Set([...prev, taskId]));
     setTimeout(() => {
@@ -65,23 +78,25 @@ export const TaskEngine: React.FC = () => {
       incrementCompletedToday();
       pushToast({ type: 'xp', title: 'Task Complete!', body: `+${xpValue} XP earned`, xpAmount: xpValue });
       setBursts(prev => [...prev, { id: taskId, amount: xpValue }]);
-    }, 400);
-  };
+    }, 300);
+  }, [completedIds, toggleTask, addXP, incrementCompletedToday, pushToast]);
 
   const dragRef = useRef<number | null>(null);
 
-  const handleDragStart = (i: number) => { dragRef.current = i; setDragIdx(i); };
-  const handleDragOver = (i: number) => {
+  const handleDragStart = React.useCallback((i: number) => { dragRef.current = i; setDragIdx(i); }, []);
+  const handleDragOver = React.useCallback((i: number) => {
     if (dragRef.current === null || dragRef.current === i) return;
-    const next = [...orderedTasks];
-    const [moved] = next.splice(dragRef.current, 1);
-    next.splice(i, 0, moved);
-    dragRef.current = i;
-    setOrderedTasks(next);
-  };
-  const handleDragEnd = () => { dragRef.current = null; setDragIdx(null); };
+    setOrderedTasks(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(dragRef.current!, 1);
+      next.splice(i, 0, moved);
+      dragRef.current = i;
+      return next;
+    });
+  }, []);
+  const handleDragEnd = React.useCallback(() => { dragRef.current = null; setDragIdx(null); }, []);
 
-  const visibleTasks = orderedTasks.slice(0, 5);
+  const visibleTasks = React.useMemo(() => orderedTasks.slice(0, 5), [orderedTasks]);
 
   return (
     <div className="space-y-4">
@@ -213,4 +228,4 @@ export const TaskEngine: React.FC = () => {
       </div>
     </div>
   );
-};
+});

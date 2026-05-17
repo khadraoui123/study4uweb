@@ -37,9 +37,11 @@ export interface AcademicSlice {
   addExam: (exam: Exam) => void;
   addPerformanceSnapshot: (score: number) => void;
   completeOnboarding: () => void;
+  simulateCognitiveDecay: () => void;
+  boostMastery: (courseId: string, amount: number) => void;
 }
 
-export const createAcademicSlice: StateCreator<AcademicSlice> = (set) => ({
+export const createAcademicSlice: StateCreator<any> = (set, get) => ({
   courses: [
     { 
       id: '1', code: 'EEE182.4', name: 'Electrical Circuit Design 1L', instructor: 'Dr. Sarah Chen',
@@ -67,24 +69,60 @@ export const createAcademicSlice: StateCreator<AcademicSlice> = (set) => ({
     { date: '2026-05-15', score: 89 }
   ],
   onboardingCompleted: false,
-  addCourse: (course) => set((state) => ({ courses: [...state.courses, course] })),
-  updateCourse: (id, update) => set((state) => ({
-    courses: state.courses.map(c => c.id === id ? { ...c, ...update } : c)
+  addCourse: (course) => set((state: any) => ({ courses: [...state.courses, course] })),
+  updateCourse: (id, update) => set((state: any) => ({
+    courses: state.courses.map((c: any) => c.id === id ? { ...c, ...update } : c)
   })),
-  logAttendance: (courseId, type) => set((state) => ({
-    courses: state.courses.map((c) => {
+  logAttendance: (courseId, type) => set((state: any) => ({
+    courses: state.courses.map((c: any) => {
       if (c.id === courseId) {
         const updated = { ...c.attendance };
-        updated[type] += 1;
+        (updated as any)[type] += 1;
         return { ...c, attendance: updated };
       }
       return c;
     })
   })),
-  addExam: (exam) => set((state) => ({ exams: [...state.exams, exam] })),
-  addPerformanceSnapshot: (score) => set((state) => ({
+  addExam: (exam) => {
+    set((state: any) => ({ exams: [...state.exams, exam] }));
+    
+    // Auto-inject into planner
+    const examEvent = {
+      id: `exam_${exam.id}`,
+      title: `EXAM: ${exam.title}`,
+      start: `${exam.date}T09:00:00`,
+      end: `${exam.date}T11:00:00`,
+      type: 'exam',
+      courseId: exam.courseId,
+      cognitiveIntensity: 'PEAK',
+      xpReward: 500,
+      status: 'pending',
+      aiRecommendation: 'High-threat temporal event. AI suggests clearing 2 days prior for deep review.'
+    };
+    
+    get().addEvent(examEvent as any);
+    get().pushToast({
+      type: 'warning',
+      title: 'Temporal Threat Detected',
+      body: `Exam "${exam.title}" added to calendar. Timeline adjusted.`,
+    });
+  },
+  addPerformanceSnapshot: (score) => set((state: any) => ({
     performanceHistory: [...state.performanceHistory, { date: new Date().toISOString().split('T')[0], score }]
   })),
-  completeOnboarding: () => set({ onboardingCompleted: true })
+  completeOnboarding: () => set({ onboardingCompleted: true }),
+
+  simulateCognitiveDecay: () => set((state: any) => ({
+    courses: state.courses.map((c: any) => ({
+      ...c,
+      percentage: Math.max(0, Math.round((c.percentage - (c.difficulty * 0.1)) * 10) / 10)
+    }))
+  })),
+
+  boostMastery: (courseId, amount) => set((state: any) => ({
+    courses: state.courses.map((c: any) => 
+      c.id === courseId ? { ...c, percentage: Math.min(100, c.percentage + amount) } : c
+    )
+  }))
 });
 

@@ -24,8 +24,10 @@ interface HeaderProps {
 
 import { useNavigate } from 'react-router-dom';
 
-export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
-  const { level, streak } = useStore();
+export const Header: React.FC<HeaderProps> = React.memo(({ onMenuClick }) => {
+  const level = useStore(state => state.level);
+  const streak = useStore(state => state.streak);
+  
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
@@ -159,4 +161,4 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
       </header>
     </TooltipProvider>
   );
-};
+});

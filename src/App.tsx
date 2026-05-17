@@ -6,6 +6,7 @@ import { Header } from './components/layout/Header';
 import { Trophy, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './components/ui/button';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // Lazy load feature modules
 const AdaptiveDashboard = React.lazy(() => import('./features/dashboard/AdaptiveHome').then(m => ({ default: m.AdaptiveDashboard })));
@@ -76,18 +77,27 @@ const LevelUpCelebration: React.FC<{ level: number; onClose: () => void }> = ({ 
     </motion.div>
   </motion.div>
 );
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 const App: React.FC = () => {
-  const { checkStreak, level } = useStore();
+  const checkStreak = useStore(state => state.checkStreak);
+  const level = useStore(state => state.level);
+  const simulateCognitiveDecay = useStore(state => state.simulateCognitiveDecay);
+  
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [lastLevel, setLastLevel] = useState(level);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
-    checkStreak();
-  }, [checkStreak]);
+    if (checkStreak) checkStreak();
+    
+    // Cognitive Decay Simulation: Mastery drops slightly every 30 seconds
+    const decayInterval = setInterval(() => {
+      if (simulateCognitiveDecay) simulateCognitiveDecay();
+    }, 30000);
+    
+    return () => clearInterval(decayInterval);
+  }, [checkStreak, simulateCognitiveDecay]);
 
   useEffect(() => {
     if (level > lastLevel) {
@@ -126,7 +136,7 @@ const App: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             className="p-8"
           >
             <React.Suspense fallback={<NeuralLoader />}>

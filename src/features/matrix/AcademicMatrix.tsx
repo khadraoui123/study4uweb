@@ -46,8 +46,9 @@ import {
 import { Modal } from "@/components/ui/modal";
 
 export const AcademicMatrix: React.FC = () => {
-  const { courses, tasks, performanceHistory, addCourse } = useStore();
+  const { courses, tasks, performanceHistory, addCourse, boostMastery, pushToast } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [newCourse, setNewCourse] = useState({
     code: '',
     name: '',
@@ -69,7 +70,20 @@ export const AcademicMatrix: React.FC = () => {
     addCourse(course);
     setIsModalOpen(false);
     setNewCourse({ code: '', name: '', instructor: '', schedule: '', room: '' });
-    alert(`Neural node ${course.code} synchronized with curriculum.`);
+    pushToast({
+      type: 'success',
+      title: 'Neural Node Synchronized',
+      body: `Entity ${course.code} initialized in the academic matrix.`
+    });
+  };
+
+  const handleBoostMastery = (courseId: string) => {
+    boostMastery(courseId, 15);
+    pushToast({
+      type: 'insight',
+      title: 'Syllabus Injection Complete',
+      body: 'Cognitive retention boosted by 15% through rapid neural sync.',
+    });
   };
 
   return (
@@ -242,7 +256,11 @@ export const AcademicMatrix: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {courses.map(course => (
-              <Card key={course.id} className="group hover:border-primary/40 transition-all cursor-pointer relative overflow-hidden bg-card/40 hover:bg-card/60 shadow-xl hover:shadow-primary/5">
+              <Card 
+                key={course.id} 
+                onClick={() => setSelectedCourse(course)}
+                className="group hover:border-primary/40 transition-all cursor-pointer relative overflow-hidden bg-card/40 hover:bg-card/60 shadow-xl hover:shadow-primary/5"
+              >
                 <CardContent className="p-10 space-y-10">
                   <div className="flex justify-between items-start">
                     <div className="space-y-2">
@@ -277,7 +295,12 @@ export const AcademicMatrix: React.FC = () => {
                           initial={{ width: 0 }}
                           animate={{ width: `${course.percentage}%` }}
                           transition={{ duration: 1.5, ease: "circOut" }}
-                          className="h-full bg-gradient-to-r from-primary to-violet-500" 
+                          className={cn(
+                            "h-full transition-all duration-1000",
+                            course.percentage > 80 ? "bg-gradient-to-r from-emerald-500 to-teal-400" :
+                            course.percentage > 40 ? "bg-gradient-to-r from-primary to-violet-500" :
+                            "bg-gradient-to-r from-destructive to-orange-500"
+                          )} 
                         />
                      </div>
                   </div>
@@ -286,15 +309,19 @@ export const AcademicMatrix: React.FC = () => {
                      <div className="flex -space-x-3">
                         {[1, 2, 3].map(i => (
                           <Avatar key={i} className="w-8 h-8 border-4 border-background shadow-lg">
-                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=node${i}`} />
+                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=node${i}${course.id}`} />
                             <AvatarFallback>U</AvatarFallback>
                           </Avatar>
                         ))}
                         <div className="w-8 h-8 rounded-full border-4 border-background bg-primary/20 flex items-center justify-center text-[9px] font-black text-primary shadow-lg">+4</div>
                      </div>
-                     <Button variant="ghost" className="text-[10px] font-black text-muted-foreground hover:text-primary uppercase tracking-widest gap-2 h-8 px-4 rounded-xl hover:bg-primary/5">
-                        Tactical Logs
-                        <ChevronRight size={14} />
+                     <Button 
+                        variant="ghost" 
+                        onClick={(e) => { e.stopPropagation(); handleBoostMastery(course.id); }}
+                        className="text-[10px] font-black text-primary hover:text-primary uppercase tracking-widest gap-2 h-8 px-4 rounded-xl hover:bg-primary/5"
+                     >
+                        <Zap size={14} className="fill-current" />
+                        Inject Sync
                      </Button>
                   </div>
                 </CardContent>
@@ -302,6 +329,59 @@ export const AcademicMatrix: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {/* Detailed Course Modal */}
+        <Modal 
+          isOpen={!!selectedCourse} 
+          onClose={() => setSelectedCourse(null)} 
+          title={selectedCourse ? `Entity Details: ${selectedCourse.code}` : ''}
+        >
+          {selectedCourse && (
+            <div className="space-y-8 p-2">
+               <div className="flex justify-between items-center">
+                  <div>
+                     <h3 className="text-3xl font-black text-foreground">{selectedCourse.name}</h3>
+                     <p className="text-muted-foreground font-bold mt-1">Lead: {selectedCourse.instructor}</p>
+                  </div>
+                  <Badge className="text-2xl font-black px-6 py-2 rounded-2xl bg-primary/10 text-primary border-none">
+                     {selectedCourse.currentGrade}
+                  </Badge>
+               </div>
+
+               <div className="grid grid-cols-2 gap-6">
+                  <Card className="bg-muted/30 border-none p-6 space-y-2">
+                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Mastery Index</p>
+                     <p className="text-4xl font-black text-foreground">{selectedCourse.percentage}%</p>
+                  </Card>
+                  <Card className="bg-muted/30 border-none p-6 space-y-2">
+                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Attendance Sync</p>
+                     <p className="text-4xl font-black text-foreground">{Math.round((selectedCourse.attendance.present / (selectedCourse.attendance.present + selectedCourse.attendance.absent + selectedCourse.attendance.late || 1)) * 100)}%</p>
+                  </Card>
+               </div>
+
+               <div className="space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Linked Resources</h4>
+                  <div className="grid grid-cols-1 gap-3">
+                     {['Syllabus_v2.pdf', 'Lecture_Notes_Neural_Sync.md', 'Core_Curriculum_Resource.link'].map(res => (
+                       <div key={res} className="p-4 rounded-xl bg-card border border-border/50 flex justify-between items-center hover:bg-muted/50 transition-colors cursor-pointer group">
+                          <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{res}</span>
+                          <ChevronRight size={16} className="text-muted-foreground" />
+                       </div>
+                     ))}
+                  </div>
+               </div>
+
+               <div className="pt-6 border-t border-border/50 flex gap-4">
+                  <Button className="flex-1 h-14 font-black uppercase text-[10px] tracking-widest gap-2 shadow-xl shadow-primary/20">
+                     <Brain size={18} /> Deep Focus session
+                  </Button>
+                  <Button variant="outline" className="flex-1 h-14 font-black uppercase text-[10px] tracking-widest gap-2 border-border/50">
+                     <Layers size={18} /> Node Analytics
+                  </Button>
+               </div>
+            </div>
+          )}
+        </Modal>
 
         {/* Tactical Overview: Deadline Radar */}
         <div className="col-span-12 lg:col-span-8 space-y-10">

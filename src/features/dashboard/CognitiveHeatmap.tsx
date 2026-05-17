@@ -24,8 +24,11 @@ function getGlowIntensity(value: number): string {
 
 const SUBJECT_OPTIONS = ['Circuit Design', 'Physics', 'Discrete Math', 'Deep Reading', 'Practice Problems', 'Revision'];
 
-export const CognitiveHeatmap: React.FC = () => {
-  const { cognitiveWindows, addEvent, pushToast } = useStore();
+export const CognitiveHeatmap: React.FC = React.memo(() => {
+  const cognitiveWindows = useStore(state => state.cognitiveWindows);
+  const addEvent = useStore(state => state.addEvent);
+  const pushToast = useStore(state => state.pushToast);
+  
   const navigate = useNavigate();
   const [hoveredHour, setHoveredHour] = useState<number | null>(null);
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
@@ -33,7 +36,7 @@ export const CognitiveHeatmap: React.FC = () => {
 
   const currentHour = new Date().getHours();
 
-  const handleSchedule = () => {
+  const handleSchedule = React.useCallback(() => {
     if (selectedHour === null) return;
     const today = new Date();
     today.setHours(selectedHour, 0, 0, 0);
@@ -49,13 +52,13 @@ export const CognitiveHeatmap: React.FC = () => {
     });
     pushToast({ type: 'success', title: 'Session Scheduled', body: `${selectedSubject} at ${HOUR_LABELS[selectedHour]}` });
     setSelectedHour(null);
-  };
+  }, [selectedHour, selectedSubject, addEvent, pushToast]);
 
-  const peakWindows = cognitiveWindows
+  const peakWindows = React.useMemo(() => cognitiveWindows
     .map((v, i) => ({ hour: i, value: v }))
     .filter(w => w.value >= 75)
     .sort((a, b) => b.value - a.value)
-    .slice(0, 3);
+    .slice(0, 3), [cognitiveWindows]);
 
   return (
     <div className="space-y-4">
@@ -97,7 +100,7 @@ export const CognitiveHeatmap: React.FC = () => {
               <button
                 onClick={() => setSelectedHour(hour === selectedHour ? null : hour)}
                 className={cn(
-                  "w-full rounded-md transition-all duration-200 hover:scale-y-110",
+                  "w-full rounded-md transition-all duration-300 hover:scale-y-110",
                   selectedHour === hour ? "ring-1 ring-white/50 scale-y-110" : "",
                   currentHour === hour ? "ring-1 ring-white/30" : ""
                 )}
@@ -105,7 +108,8 @@ export const CognitiveHeatmap: React.FC = () => {
                   height: Math.max(24, Math.round((value / 100) * 64)),
                   background: getWindowColor(value),
                   boxShadow: hoveredHour === hour || selectedHour === hour ? getGlowIntensity(value) : 'none',
-                  opacity: hoveredHour !== null && hoveredHour !== hour ? 0.5 : 1,
+                  opacity: hoveredHour !== null && hoveredHour !== hour ? 0.3 : 1,
+                  willChange: 'transform, height'
                 }}
               />
               {/* Current time marker */}
@@ -205,4 +209,4 @@ export const CognitiveHeatmap: React.FC = () => {
       </AnimatePresence>
     </div>
   );
-};
+});

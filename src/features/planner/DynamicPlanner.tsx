@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../store';
 import { 
   Calendar as CalendarIcon, Plus, Sparkles, Clock, BookOpen, AlertCircle, Zap, 
-  LayoutGrid, List, Target, Activity, History, MousePointer2, Brain, ArrowRight, 
-  CheckCircle2, XCircle, RefreshCw, Sliders, TrendingUp, TrendingDown, Flame, 
-  ShieldAlert, Play, Pause, FastForward, RotateCcw, HelpCircle, FileText, 
+  LayoutGrid, List, Target, Activity, Brain, 
+  CheckCircle2, RefreshCw, Sliders, TrendingUp, TrendingDown, Flame, 
+  ShieldAlert, Play, FileText, 
   ChevronDown, ChevronUp, GripVertical, Check, X, AlertTriangle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Progress } from "@/components/ui/progress";
+
 import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
@@ -29,9 +29,8 @@ const TimeDriftMonitor: React.FC<{
   driftScore: number;
   driftMessage: string;
   alignmentHistory: { date: string; score: number }[];
-}> = ({ driftScore, driftMessage, alignmentHistory }) => {
+}> = React.memo(({ driftScore, driftMessage, alignmentHistory }) => {
   const isDrifting = driftScore < 0;
-  const absScore = Math.abs(driftScore);
   const color = isDrifting ? '#EF4444' : driftScore > 0 ? '#10B981' : '#7C3AED';
 
   return (
@@ -106,14 +105,14 @@ const TimeDriftMonitor: React.FC<{
       </CardContent>
     </Card>
   );
-};
+});
 
 // ─── AI Auto-Fill Controls Component ────────────────────────────────────────
 const AIAutoFillControls: React.FC<{
   onAutoFill: () => void;
   isAiAnalyzing: boolean;
   courses: any[];
-}> = ({ onAutoFill, isAiAnalyzing, courses }) => {
+}> = React.memo(({ onAutoFill, isAiAnalyzing, courses: _courses }) => {
   const [selectedPriority, setSelectedPriority] = useState('weak');
   const [intensity, setIntensity] = useState(80);
 
@@ -212,7 +211,7 @@ const AIAutoFillControls: React.FC<{
       </CardContent>
     </Card>
   );
-};
+});
 
 // ─── Intelligent Study Block Component ──────────────────────────────────────
 const IntelligentStudyBlock: React.FC<{
@@ -431,7 +430,7 @@ const IntelligentStudyBlock: React.FC<{
 export const DynamicPlanner: React.FC = () => {
   const { 
     events, driftScore, driftMessage, alignmentHistory, isAiAnalyzing, 
-    addEvent, resolveEvent, autoFillSchedule, recalculateDrift, 
+    resolveEvent, updateFocusSession, autoFillSchedule, recalculateDrift, 
     exams, courses, tasks, addTask, startFocusSession, addXP 
   } = useStore();
 
@@ -476,12 +475,12 @@ export const DynamicPlanner: React.FC = () => {
   };
 
   const handleStartFocus = (event: CalendarEvent) => {
+    updateFocusSession(event.id, { status: 'active' });
     startFocusSession();
     alert(`Initiating Focus Stream for "${event.title}". Ambient soundscapes & neural timers engaged.`);
   };
 
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  const hours = Array.from({ length: 15 }, (_, i) => i + 8); // 8 AM to 10 PM
+
 
   return (
     <TooltipProvider>

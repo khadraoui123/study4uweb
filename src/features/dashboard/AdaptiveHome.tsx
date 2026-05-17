@@ -42,25 +42,32 @@ const productivityMessages: Record<string, { headline: string; sub: string; dura
 
 const urgencyColors: Record<string, string> = { PEAK: '#10B981', NORMAL: '#7C3AED', BURNOUT_RISK: '#F59E0B', RECOVERING: '#06B6D4' };
 
-const DailyForecast: React.FC = () => {
-  const { productivityState, focusScore, tasks, exams, startFocusSession, pushToast } = useStore();
+const DailyForecast: React.FC = React.memo(() => {
+  const productivityState = useStore(state => state.productivityState);
+  const focusScore = useStore(state => state.focusScore);
+  const tasks = useStore(state => state.tasks);
+  const exams = useStore(state => state.exams);
+  const startFocusSession = useStore(state => state.startFocusSession);
+  const pushToast = useStore(state => state.pushToast);
+
   const navigate = useNavigate();
   const msg = productivityMessages[productivityState] ?? productivityMessages.NORMAL;
   const color = urgencyColors[productivityState] ?? '#7C3AED';
-  const pendingTasks = tasks.filter(t => !t.completed).length;
-  const nearestExam = exams.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
-  const daysToExam = nearestExam ? Math.ceil((new Date(nearestExam.date).getTime() - Date.now()) / 86400000) : null;
+  
+  const pendingTasks = React.useMemo(() => tasks.filter(t => !t.completed).length, [tasks]);
+  const nearestExam = React.useMemo(() => [...exams].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0], [exams]);
+  const daysToExam = React.useMemo(() => nearestExam ? Math.ceil((new Date(nearestExam.date).getTime() - Date.now()) / 86400000) : null, [nearestExam]);
 
-  const handleAccept = () => {
+  const handleAccept = React.useCallback(() => {
     navigate('/planner');
     pushToast({ type: 'success', title: 'Schedule Synced', body: 'Neural schedule added to your planner.' });
-  };
+  }, [navigate, pushToast]);
 
-  const handleFocus = () => {
+  const handleFocus = React.useCallback(() => {
     startFocusSession();
     navigate('/focus');
     pushToast({ type: 'focus', title: 'Focus Session Started', body: 'Neural protocols active.' });
-  };
+  }, [startFocusSession, navigate, pushToast]);
 
   // Arc gauge
   const gaugePercent = focusScore;
@@ -127,7 +134,7 @@ const DailyForecast: React.FC = () => {
               strokeDasharray={circumference}
               initial={{ strokeDashoffset: circumference }}
               animate={{ strokeDashoffset: offset }}
-              transition={{ duration: 1.5, ease: 'circOut' }}
+              transition={{ duration: 1, ease: 'circOut' }}
               transform="rotate(-90 50 50)"
               style={{ filter: `drop-shadow(0 0 6px ${color})` }}
             />
@@ -149,7 +156,7 @@ const DailyForecast: React.FC = () => {
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${s.val}%` }}
-                  transition={{ duration: 1.5, ease: 'circOut' }}
+                  transition={{ duration: 1, ease: 'circOut' }}
                   className="h-full rounded-full"
                   style={{ background: s.color }}
                 />
@@ -164,11 +171,12 @@ const DailyForecast: React.FC = () => {
       </div>
     </div>
   );
-};
+});
 
 // ─── Cognitive Matrix ────────────────────────────────────────────────────────
-const CognitiveMatrix: React.FC = () => {
-  const { courses, dailyGoals } = useStore();
+const CognitiveMatrix: React.FC = React.memo(() => {
+  const courses = useStore(state => state.courses);
+  const dailyGoals = useStore(state => state.dailyGoals);
   const navigate = useNavigate();
 
   const stats = [
@@ -177,7 +185,7 @@ const CognitiveMatrix: React.FC = () => {
     { label: 'Retention', val: 78, icon: <Brain size={15} />, route: '/courses', status: 'Stable' },
   ];
 
-  const goalsPercent = Math.round((dailyGoals.completed / Math.max(dailyGoals.total, 1)) * 100);
+  const goalsPercent = React.useMemo(() => Math.round((dailyGoals.completed / Math.max(dailyGoals.total, 1)) * 100), [dailyGoals]);
 
   return (
     <div className="space-y-5">
@@ -191,7 +199,7 @@ const CognitiveMatrix: React.FC = () => {
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${goalsPercent}%` }}
-            transition={{ duration: 1.2, ease: 'circOut' }}
+            transition={{ duration: 1, ease: 'circOut' }}
             className="h-full rounded-full"
             style={{ background: 'linear-gradient(90deg, #10B981, #06B6D4)' }}
           />
@@ -204,7 +212,7 @@ const CognitiveMatrix: React.FC = () => {
           key={stat.label}
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: i * 0.1 }}
+          transition={{ delay: i * 0.05 }}
           onClick={() => navigate(stat.route)}
           className="flex flex-col gap-2.5 cursor-pointer group"
         >
@@ -225,7 +233,7 @@ const CognitiveMatrix: React.FC = () => {
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${stat.val}%` }}
-              transition={{ duration: 1.2, delay: i * 0.15, ease: 'circOut' }}
+              transition={{ duration: 1, delay: i * 0.1, ease: 'circOut' }}
               className="h-full rounded-full group-hover:opacity-100 opacity-60 transition-opacity"
               style={{ background: 'linear-gradient(90deg, #7C3AED, #A78BFA)' }}
             />
@@ -249,7 +257,7 @@ const CognitiveMatrix: React.FC = () => {
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${c.percentage}%` }}
-                    transition={{ duration: 1.2, ease: 'circOut' }}
+                    transition={{ duration: 1, ease: 'circOut' }}
                     className="h-full rounded-full"
                     style={{ background: c.percentage >= 90 ? '#10B981' : c.percentage >= 75 ? '#7C3AED' : '#F59E0B' }}
                   />
@@ -262,21 +270,22 @@ const CognitiveMatrix: React.FC = () => {
       </div>
     </div>
   );
-};
+});
 
 // ─── Quick Actions ──────────────────────────────────────────────────────────
-const QuickActions: React.FC = () => {
+const QuickActions: React.FC = React.memo(() => {
   const navigate = useNavigate();
-  const { startFocusSession, pushToast } = useStore();
+  const startFocusSession = useStore(state => state.startFocusSession);
+  const pushToast = useStore(state => state.pushToast);
 
-  const actions = [
+  const actions = React.useMemo(() => [
     { icon: <Zap size={18} />, label: 'Focus Room', color: '#7C3AED', bg: 'rgba(124,58,237,0.12)', route: '/focus', fn: () => { startFocusSession(); pushToast({ type: 'focus', title: 'Focus Session Started' }); } },
     { icon: <Brain size={18} />, label: 'AI Tutor', color: '#06B6D4', bg: 'rgba(6,182,212,0.12)', route: '/tutor' },
     { icon: <BarChart3 size={18} />, label: 'Analytics', color: '#10B981', bg: 'rgba(16,185,129,0.12)', route: '/analytics' },
     { icon: <BookOpen size={18} />, label: 'Courses', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', route: '/courses' },
     { icon: <Calendar size={18} />, label: 'Planner', color: '#A78BFA', bg: 'rgba(167,139,250,0.12)', route: '/planner' },
     { icon: <BarChart2 size={18} />, label: 'Exams', color: '#EF4444', bg: 'rgba(239,68,68,0.12)', route: '/exams' },
-  ];
+  ], [startFocusSession, pushToast]);
 
   return (
     <div className="grid grid-cols-3 gap-2">
@@ -285,7 +294,7 @@ const QuickActions: React.FC = () => {
           key={a.label}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: i * 0.05 }}
+          transition={{ delay: i * 0.03 }}
           onClick={() => { a.fn?.(); navigate(a.route); }}
           className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all hover:scale-105 active:scale-95 group"
           style={{ background: a.bg, border: `1px solid ${a.color}20` }}
@@ -296,11 +305,14 @@ const QuickActions: React.FC = () => {
       ))}
     </div>
   );
-};
+});
 
 // ─── System Health Bar ───────────────────────────────────────────────────────
-const SystemHealthBar: React.FC = () => {
-  const { productivityState, aiActivityStatus, activeFocusSession } = useStore();
+const SystemHealthBar: React.FC = React.memo(() => {
+  const productivityState = useStore(state => state.productivityState);
+  const aiActivityStatus = useStore(state => state.aiActivityStatus);
+  const activeFocusSession = useStore(state => state.activeFocusSession);
+  
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -308,8 +320,8 @@ const SystemHealthBar: React.FC = () => {
     return () => clearInterval(i);
   }, []);
 
-  const stateColor = { PEAK: '#10B981', NORMAL: '#7C3AED', BURNOUT_RISK: '#F59E0B', RECOVERING: '#06B6D4' }[productivityState] ?? '#7C3AED';
-  const stateLabel = { PEAK: 'Peak Mode', NORMAL: 'Nominal', BURNOUT_RISK: 'Risk Detected', RECOVERING: 'Recovering' }[productivityState] ?? 'Nominal';
+  const stateColor = React.useMemo(() => ({ PEAK: '#10B981', NORMAL: '#7C3AED', BURNOUT_RISK: '#F59E0B', RECOVERING: '#06B6D4' }[productivityState] ?? '#7C3AED'), [productivityState]);
+  const stateLabel = React.useMemo(() => ({ PEAK: 'Peak Mode', NORMAL: 'Nominal', BURNOUT_RISK: 'Risk Detected', RECOVERING: 'Recovering' }[productivityState] ?? 'Nominal'), [productivityState]);
 
   return (
     <div className="flex items-center justify-between flex-wrap gap-3 px-1">
@@ -325,11 +337,11 @@ const SystemHealthBar: React.FC = () => {
       </div>
     </div>
   );
-};
+});
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 export const AdaptiveDashboard: React.FC = () => {
-  const { aiMemory } = useStore();
+  const aiMemory = useStore(state => state.aiMemory);
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 
@@ -370,7 +382,7 @@ export const AdaptiveDashboard: React.FC = () => {
       </motion.div>
 
       {/* Daily Forecast */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
         <DailyForecast />
       </motion.div>
 
@@ -379,12 +391,12 @@ export const AdaptiveDashboard: React.FC = () => {
         {/* Left Column — 8 wide */}
         <div className="col-span-12 xl:col-span-8 space-y-5">
           {/* Cognitive Heatmap */}
-          <Panel delay={0.15}>
+          <Panel delay={0.1}>
             <CognitiveHeatmap />
           </Panel>
 
           {/* High-Impact Task Engine */}
-          <Panel delay={0.2}>
+          <Panel delay={0.15}>
             <TaskEngine />
           </Panel>
         </div>
@@ -392,17 +404,17 @@ export const AdaptiveDashboard: React.FC = () => {
         {/* Right Column — 4 wide */}
         <div className="col-span-12 xl:col-span-4 space-y-5">
           {/* XP Rank Engine */}
-          <Panel delay={0.15}>
+          <Panel delay={0.1}>
             <XPRankEngine />
           </Panel>
 
           {/* Neural Insights */}
-          <Panel delay={0.25}>
+          <Panel delay={0.2}>
             <NeuralInsightPanel />
           </Panel>
 
           {/* Cognitive Matrix */}
-          <Panel delay={0.3}>
+          <Panel delay={0.25}>
             <CognitiveMatrix />
           </Panel>
         </div>

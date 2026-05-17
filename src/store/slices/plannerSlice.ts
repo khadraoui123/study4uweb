@@ -26,7 +26,8 @@ export interface PlannerSlice {
   removeEvent: (id: string) => void;
   updateEvent: (id: string, update: Partial<CalendarEvent>) => void;
   updateEventTime: (id: string, start: string, end: string) => void;
-  resolveEvent: (id: string, outcome: 'completed' | 'missed' | 'delayed') => void;
+  updateFocusSession: (id: string, update: Partial<CalendarEvent>) => void;
+  resolveEvent: (id: string, outcome: 'completed' | 'missed' | 'delayed' | 'active') => void;
   autoFillSchedule: (tasks: any[], courses: any[]) => void;
   recalculateDrift: () => void;
   adjustScheduleForTaskCompletion: (taskId: string) => void;
@@ -112,13 +113,32 @@ export const createPlannerSlice: StateCreator<PlannerSlice> = (set, get) => ({
   
   removeEvent: (id) => set((state) => ({ events: state.events.filter(e => e.id !== id) })),
   
-  updateEvent: (id, update) => set((state) => ({
-    events: state.events.map(e => e.id === id ? { ...e, ...update } : e)
-  })),
+  updateEvent: (id, update) => {
+    set((state) => ({
+      events: state.events.map(e => e.id === id ? { ...e, ...update } : e)
+    }));
+    if (update.status) get().recalculateDrift();
+  },
 
   updateEventTime: (id, start, end) => set((state) => ({
     events: state.events.map(e => e.id === id ? { ...e, start, end } : e)
   })),
+
+  updateFocusSession: (id, update) => {
+    set((state) => ({
+      events: state.events.map(e => {
+        if (e.id === id) {
+          return { ...e, ...update };
+        }
+        // Exclusivity: Only one event should be active at a time
+        if (update.status === 'active' && e.status === 'active') {
+          return { ...e, status: 'pending' };
+        }
+        return e;
+      })
+    }));
+    get().recalculateDrift();
+  },
 
   resolveEvent: (id, outcome) => {
     set((state) => {

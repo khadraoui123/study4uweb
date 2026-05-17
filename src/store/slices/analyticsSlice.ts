@@ -14,6 +14,7 @@ export interface AnalyticsSlice {
   weeklyProgress: number[]; // 7 values
   addSession: (session: StudySession) => void;
   updateGoal: (completed: number) => void;
+  incrementDailyGoal: () => void;
 }
 
 export const createAnalyticsSlice: StateCreator<AnalyticsSlice> = (set) => ({
@@ -29,5 +30,8 @@ export const createAnalyticsSlice: StateCreator<AnalyticsSlice> = (set) => ({
   })),
   updateGoal: (completed) => set((state) => ({ 
     dailyGoals: { ...state.dailyGoals, completed } 
+  })),
+  incrementDailyGoal: () => set((state) => ({ 
+    dailyGoals: { ...state.dailyGoals, completed: state.dailyGoals.completed + 1 } 
   })),
 });
