@@ -1,6 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { User, Award, BookOpen, Clock, Edit2, Share2 } from 'lucide-react';
+import { Award, BookOpen, Clock, Edit2, Share2 } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';

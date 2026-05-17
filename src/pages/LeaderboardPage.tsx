@@ -1,8 +1,7 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Trophy, Medal, Crown, Star } from 'lucide-react';
+import { Medal, Crown, Star } from 'lucide-react';
 import { Card } from '../components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { Avatar, AvatarFallback } from '../components/ui/avatar';
 
 import { useStore } from '../store';
 

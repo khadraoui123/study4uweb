@@ -9,6 +9,7 @@ import { createPlannerSlice, type PlannerSlice } from './store/slices/plannerSli
 import { createAnalyticsSlice, type AnalyticsSlice } from './store/slices/analyticsSlice';
 import { createFocusSlice, type FocusSlice } from './store/slices/focusSlice';
 import { createSocialSlice, type SocialSlice } from './store/slices/socialSlice';
+import { createDashboardSlice, type DashboardSlice } from './store/slices/dashboardSlice';
 
 type StoreState = AcademicSlice & 
   AISlice & 
@@ -18,7 +19,8 @@ type StoreState = AcademicSlice &
   PlannerSlice & 
   AnalyticsSlice & 
   FocusSlice & 
-  SocialSlice & {
+  SocialSlice &
+  DashboardSlice & {
   checkStreak: () => void;
 };
 
@@ -34,6 +36,7 @@ export const useStore = create<StoreState>()(
       ...createAnalyticsSlice(...a),
       ...createFocusSlice(...a),
       ...createSocialSlice(...a),
+      ...createDashboardSlice(...a),
       
       checkStreak: () => {
         // Simple placeholder for now, already have streak in state

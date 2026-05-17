@@ -57,7 +57,7 @@ export const createSocialSlice: StateCreator<SocialSlice> = (set) => ({
   ],
   addFriend: (friend) => set((state) => ({ friends: [...state.friends, friend] })),
   removeFriend: (id) => set((state) => ({ friends: state.friends.filter(f => f.id !== id) })),
-  updateStatus: (status, activity) => set((state) => ({})),
+  updateStatus: (_status: 'online' | 'offline' | 'studying', _activity?: string) => set((_state) => ({})),
   markAllRead: () => set({ notifications: [] }),
   clearNotification: (id) => set((state) => ({ notifications: state.notifications.filter(n => n.id !== id) })),
 });

@@ -1,6 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Calendar as CalendarIcon, Clock, ChevronRight } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { Card } from '../components/ui/card';
 
 export const CalendarPage: React.FC = () => {

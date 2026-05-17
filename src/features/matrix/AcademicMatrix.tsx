@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../../store';
+import type { Course } from '../../store/slices/academicSlice';
 import { 
   Search, 
   Plus, 

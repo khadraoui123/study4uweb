@@ -1,342 +1,410 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../../store';
-import { 
-  ArrowRight,
-  Clock,
-  CheckCircle2,
-  Brain,
-  Zap,
-  Target,
-  Search,
-  Activity,
-  ShieldCheck,
-  TrendingUp,
-  Cpu,
-  AlertTriangle,
-  Flame
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
-
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import {
+  Brain, Zap, Activity, ArrowRight, TrendingUp,
+  Target, BarChart3, Clock, Calendar, BookOpen,
+  Cpu, ShieldCheck, BarChart2,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
-export const AdaptiveDashboard: React.FC = () => {
-  const { courses, tasks, aiMemory, toggleTask, streak, startFocusSession, level } = useStore();
+import { StatusTicker } from './StatusTicker';
+import { TaskEngine } from './TaskEngine';
+import { NeuralInsightPanel } from './NeuralInsightPanel';
+import { CognitiveHeatmap } from './CognitiveHeatmap';
+import { XPRankEngine } from './XPRankEngine';
+import { ToastSystem } from './ToastSystem';
+
+// ─── Animated panel wrapper ─────────────────────────────────────────────────
+const Panel: React.FC<{ children: React.ReactNode; className?: string; delay?: number }> = ({ children, className, delay = 0 }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 24 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, delay, ease: 'easeOut' }}
+    className={cn('rounded-2xl p-5 relative overflow-hidden', className)}
+    style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', backdropFilter: 'blur(16px)' }}
+  >
+    {children}
+  </motion.div>
+);
+
+// ─── Daily Forecast ─────────────────────────────────────────────────────────
+const productivityMessages: Record<string, { headline: string; sub: string; duration: string; period: string }> = {
+  PEAK: { headline: 'Peak Cognitive State', sub: 'Your neural pathways are fully optimized. This is your highest-performance window.', duration: '3–4 hours', period: '7PM – 10PM' },
+  NORMAL: { headline: 'Steady Progress Detected', sub: 'Good baseline energy. Recommended for moderate-difficulty material and review.', duration: '2–3 hours', period: '10AM – 12PM' },
+  BURNOUT_RISK: { headline: 'Burnout Risk Elevated', sub: 'Mental fatigue detected. Prioritize rest intervals and lighter review tasks.', duration: '1–2 hours', period: '10AM – 11AM' },
+  RECOVERING: { headline: 'Recovery Protocol Active', sub: 'Energy rebuilding. Light revision and spaced repetition are ideal now.', duration: '1–1.5 hours', period: '2PM – 3:30PM' },
+};
+
+const urgencyColors: Record<string, string> = { PEAK: '#10B981', NORMAL: '#7C3AED', BURNOUT_RISK: '#F59E0B', RECOVERING: '#06B6D4' };
+
+const DailyForecast: React.FC = () => {
+  const { productivityState, focusScore, tasks, exams, startFocusSession, pushToast } = useStore();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
-  const isRTL = i18n.language === 'ar';
+  const msg = productivityMessages[productivityState] ?? productivityMessages.NORMAL;
+  const color = urgencyColors[productivityState] ?? '#7C3AED';
+  const pendingTasks = tasks.filter(t => !t.completed).length;
+  const nearestExam = exams.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+  const daysToExam = nearestExam ? Math.ceil((new Date(nearestExam.date).getTime() - Date.now()) / 86400000) : null;
 
-  const activeTasks = tasks.filter(t => !t.completed);
-
-  const handleAcceptSchedule = () => {
-    alert("Neural schedule synchronized with your temporal engine.");
+  const handleAccept = () => {
     navigate('/planner');
+    pushToast({ type: 'success', title: 'Schedule Synced', body: 'Neural schedule added to your planner.' });
   };
 
-  const handleRecalibrate = () => {
+  const handleFocus = () => {
     startFocusSession();
     navigate('/focus');
+    pushToast({ type: 'focus', title: 'Focus Session Started', body: 'Neural protocols active.' });
   };
 
+  // Arc gauge
+  const gaugePercent = focusScore;
+  const circumference = 2 * Math.PI * 36;
+  const offset = circumference - (gaugePercent / 100) * circumference;
+
   return (
-    <div className="space-y-10 max-w-7xl mx-auto pb-20" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Neural Status Ticker */}
-      <div className="w-full bg-primary/5 border-y border-primary/10 py-2 overflow-hidden relative group">
-        <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-background to-transparent z-10" />
-        <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-background to-transparent z-10" />
-        <motion.div 
-          animate={{ x: [0, -1000] }}
-          transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-          className="flex whitespace-nowrap gap-12 items-center"
-        >
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
-              <span className="flex items-center gap-2"><div className="w-1 h-1 bg-primary rounded-full animate-pulse" /> {t('dashboard.neuralOS')} 0{i+1}: SYNCHRONIZED</span>
-              <span className="flex items-center gap-2"><Activity size={12} className="text-primary" /> LOAD: 42%</span>
-              <span className="flex items-center gap-2"><ShieldCheck size={12} className="text-emerald-500" /> INTEGRITY: OPTIMAL</span>
-              <span className="flex items-center gap-2"><Cpu size={12} className="text-violet-500" /> CORE: ACTIVE</span>
+    <div className="flex flex-col md:flex-row gap-0 rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+      {/* Main content */}
+      <div className="flex-1 p-6 space-y-5" style={{ background: 'rgba(255,255,255,0.02)' }}>
+        <div className="flex items-center gap-2">
+          <Badge className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1"
+            style={{ background: `${color}15`, color, border: `1px solid ${color}30` }}>
+            AI Forecast
+          </Badge>
+          {daysToExam !== null && daysToExam <= 10 && (
+            <Badge className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1"
+              style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.25)' }}>
+              Exam in {daysToExam}d
+            </Badge>
+          )}
+        </div>
+
+        <div>
+          <h3 className="text-2xl font-black text-foreground tracking-tight mb-1.5">{msg.headline}</h3>
+          <p className="text-muted-foreground text-sm leading-relaxed">{msg.sub}</p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { icon: <Clock size={14} />, label: 'Recommended', val: msg.duration },
+            { icon: <Calendar size={14} />, label: 'Best Window', val: msg.period },
+            { icon: <Target size={14} />, label: 'Open Tasks', val: `${pendingTasks} pending` },
+          ].map(item => (
+            <div key={item.label} className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="flex items-center gap-1.5 mb-1 text-muted-foreground">{item.icon}<span className="text-[9px] font-black uppercase tracking-widest">{item.label}</span></div>
+              <p className="text-xs font-black text-foreground">{item.val}</p>
             </div>
           ))}
-        </motion.div>
+        </div>
+
+        <div className="flex gap-3">
+          <Button onClick={handleAccept} className="h-10 px-6 font-black uppercase text-[10px] tracking-widest rounded-xl shadow-lg" style={{ boxShadow: `0 8px 24px ${color}25` }}>
+            Accept Schedule <ArrowRight size={14} className="ml-2" />
+          </Button>
+          <Button variant="outline" onClick={handleFocus} className="h-10 px-5 font-black uppercase text-[10px] tracking-widest rounded-xl border-border/50 gap-2">
+            <Zap size={14} /> Start Focus
+          </Button>
+        </div>
       </div>
 
-      <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-10">
-        <div className="space-y-6 flex-1">
-          <div className="flex items-center gap-4">
-             <Badge variant="secondary" className="px-4 py-1.5 rounded-full bg-primary/10 text-primary border-primary/20 gap-2 shadow-lg shadow-primary/5">
-                <Brain size={16} className="fill-current animate-pulse" />
-                <span className="text-[11px] font-black uppercase tracking-widest">{t('dashboard.neuralOS')}</span>
-             </Badge>
-             <div className="h-px flex-1 bg-border/50 max-w-[100px]" />
-             <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.4em]">{t('dashboard.integrityVerified')}</span>
-          </div>
-          <div className="space-y-2">
-             <h1 className="text-6xl font-black heading-os tracking-tight text-foreground leading-[1.1]">
-               {aiMemory.burnoutRisk > 40 ? t('dashboard.welcomeBack') : t('dashboard.welcome')} <br />
-               <span className="text-gradient-ai">Tareq Ahmed</span>
-             </h1>
-             <p className="text-muted-foreground text-xl font-medium max-w-2xl leading-relaxed">
-               {t('dashboard.efficiency')} <span className="text-primary font-black border-b-2 border-primary/20">89%</span>. 
-               {t('dashboard.readyToFinalize')} <span className="text-foreground font-black border-b-2 border-primary/40">Circuit Design</span> nodes?
-             </p>
-          </div>
+      {/* Gauge sidebar */}
+      <div className="w-full md:w-52 p-6 flex flex-col items-center justify-between gap-4" style={{ background: 'rgba(255,255,255,0.015)', borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="flex flex-col items-center gap-1">
+          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Focus Score</p>
+          <svg width="100" height="100" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="36" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+            <motion.circle
+              cx="50" cy="50" r="36"
+              fill="none"
+              stroke={color}
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              initial={{ strokeDashoffset: circumference }}
+              animate={{ strokeDashoffset: offset }}
+              transition={{ duration: 1.5, ease: 'circOut' }}
+              transform="rotate(-90 50 50)"
+              style={{ filter: `drop-shadow(0 0 6px ${color})` }}
+            />
+            <text x="50" y="55" textAnchor="middle" fill="white" fontSize="20" fontWeight="900" fontFamily="Outfit">{gaugePercent}</text>
+          </svg>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 w-full lg:w-auto">
-          <Card 
-            className="bg-card/30 backdrop-blur-xl border-border/50 group hover:border-amber-500/30 transition-all cursor-pointer"
-            onClick={() => navigate('/achievements')}
-          >
-            <CardContent className="p-8 flex flex-col items-center justify-center min-w-[160px] relative overflow-hidden">
-              <div className="absolute -bottom-4 -right-4 opacity-5 group-hover:scale-125 transition-transform duration-700">
-                <Flame size={80} className="text-amber-500" />
+        <div className="space-y-3 w-full">
+          {[
+            { label: 'XP Velocity', val: 85, color: '#10B981', note: '+450' },
+            { label: 'Mastery Index', val: 60, color: '#7C3AED', note: '+12%' },
+          ].map(s => (
+            <div key={s.label}>
+              <div className="flex justify-between mb-1">
+                <span className="text-[9px] font-bold text-foreground">{s.label}</span>
+                <span className="text-[9px] font-black" style={{ color: s.color }}>{s.note}</span>
               </div>
-              <Flame size={32} className="text-amber-500 mb-3 fill-current shadow-[0_0_20px_rgba(245,158,11,0.4)]" />
-              <span className="text-5xl font-black text-foreground tracking-tighter tabular-nums">{streak}</span>
-              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] mt-1">{t('dashboard.streak')}</span>
-            </CardContent>
-          </Card>
-          <Card 
-            className="bg-primary/5 backdrop-blur-xl border-primary/20 group hover:border-primary/50 transition-all cursor-pointer shadow-2xl shadow-primary/5"
-            onClick={() => navigate('/leaderboards')}
-          >
-            <CardContent className="p-8 flex flex-col items-center justify-center min-w-[160px] relative overflow-hidden">
-               <div className="absolute -bottom-4 -right-4 opacity-5 group-hover:scale-125 transition-transform duration-700">
-                <Zap size={80} className="text-primary" />
-              </div>
-              <Zap size={32} className="text-primary mb-3 fill-current shadow-[0_0_20px_rgba(var(--primary),0.4)]" />
-              <span className="text-5xl font-black text-primary tracking-tighter tabular-nums">{aiMemory.productivityScore}</span>
-              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] mt-1">{t('dashboard.rank')}</span>
-            </CardContent>
-          </Card>
-        </div>
-      </header>
-
-      <div className="grid grid-cols-12 gap-10">
-        {/* Main Content Area */}
-        <div className="col-span-12 lg:col-span-8 space-y-10">
-          
-          {/* Daily Forecast Card */}
-          <Card className="border-border/50 bg-card/20 backdrop-blur-sm overflow-hidden group">
-            <CardContent className="p-0 flex flex-col md:flex-row h-full">
-               <div className="p-10 flex-1 space-y-8">
-                  <div className="space-y-4">
-                     <Badge variant="outline" className="text-emerald-500 border-emerald-500/20 bg-emerald-500/5 px-3 py-1 font-black text-[10px] tracking-widest uppercase">{t('dashboard.forecast')}</Badge>
-                     <h3 className="text-3xl font-black text-foreground tracking-tight">{t('dashboard.peakWindow')}</h3>
-                     <p className="text-muted-foreground font-medium leading-relaxed">
-                        {t('dashboard.forecastDesc')}
-                     </p>
-                  </div>
-                  <div className="flex gap-4">
-                     <Button 
-                       className="h-12 px-8 font-black uppercase text-[10px] tracking-widest rounded-xl shadow-xl shadow-primary/20"
-                       onClick={handleAcceptSchedule}
-                     >
-                        {t('dashboard.acceptSchedule')}
-                     </Button>
-                     <Button 
-                       variant="outline" 
-                       className="h-12 px-8 font-black uppercase text-[10px] tracking-widest rounded-xl border-border/50"
-                       onClick={() => navigate('/planner')}
-                     >
-                        {t('dashboard.modifyPlan')}
-                     </Button>
-                  </div>
-               </div>
-               <div className="w-full md:w-64 bg-muted/30 border-l border-border/50 p-8 flex flex-col justify-between">
-                  <div className="space-y-4" onClick={() => navigate('/analytics')} className="cursor-pointer group/stats">
-                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest group-hover/stats:text-primary">{t('dashboard.expectedGains')}</p>
-                     <div className="space-y-6">
-                        <div>
-                           <div className="flex justify-between mb-2">
-                              <span className="text-xs font-bold text-foreground">{t('dashboard.xpVelocity')}</span>
-                              <span className="text-xs font-black text-emerald-500">+450</span>
-                           </div>
-                           <Progress value={85} className="h-1 bg-muted" indicatorClassName="bg-emerald-500" />
-                        </div>
-                        <div>
-                           <div className="flex justify-between mb-2">
-                              <span className="text-xs font-bold text-foreground">{t('dashboard.masteryIndex')}</span>
-                              <span className="text-xs font-black text-primary">+12%</span>
-                           </div>
-                           <Progress value={60} className="h-1 bg-muted" indicatorClassName="bg-primary" />
-                        </div>
-                     </div>
-                  </div>
-                  <div className="pt-4 border-t border-border/50 flex items-center gap-2 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                     <TrendingUp size={14} className="text-emerald-500" /> {t('dashboard.trendingUp')}
-                  </div>
-               </div>
-            </CardContent>
-          </Card>
-
-          <Tabs defaultValue="tasks" className="w-full">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-8">
-              <TabsList className="bg-muted/50 p-1 h-12 rounded-xl">
-                <TabsTrigger value="tasks" className="px-8 h-10 font-black uppercase text-[10px] tracking-[0.2em] data-[state=active]:bg-background data-[state=active]:shadow-lg rounded-lg transition-all">{t('dashboard.tacticalTasks')}</TabsTrigger>
-                <TabsTrigger value="courses" className="px-8 h-10 font-black uppercase text-[10px] tracking-[0.2em] data-[state=active]:bg-background data-[state=active]:shadow-lg rounded-lg transition-all">{t('dashboard.neuralNodes')}</TabsTrigger>
-              </TabsList>
-              <div className="flex items-center gap-4 w-full sm:w-auto">
-                 <div className="relative flex-1 sm:w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-                    <input className="w-full bg-muted/50 border-none rounded-xl py-2.5 pl-10 pr-4 text-xs font-bold focus:ring-1 ring-primary/20 transition-all outline-none" placeholder={t('dashboard.searchIntel')} />
-                 </div>
-                 <Button variant="outline" size="icon" className="w-11 h-11 border-border/50 rounded-xl shrink-0" onClick={() => navigate('/tasks')}><Target size={18} /></Button>
+              <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${s.val}%` }}
+                  transition={{ duration: 1.5, ease: 'circOut' }}
+                  className="h-full rounded-full"
+                  style={{ background: s.color }}
+                />
               </div>
             </div>
-
-            <TabsContent value="tasks" className="space-y-6 outline-none">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {activeTasks.slice(0, 4).map(task => (
-                  <Card key={task.id} className="group hover:border-primary/30 transition-all cursor-pointer border-border/50 bg-card/40 hover:bg-card/60" onClick={() => {
-                    toggleTask(task.id);
-                    alert(`Task completed: ${task.title}. XP Gained: ${task.xpValue}`);
-                  }}>
-                    <CardContent className="p-8">
-                      <div className="flex justify-between items-start mb-6">
-                        <div className={cn(
-                          "w-12 h-12 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110",
-                          task.urgency === 'URGENT' ? "bg-destructive/10 text-destructive shadow-lg shadow-destructive/5" : "bg-muted text-muted-foreground"
-                        )}>
-                          {task.urgency === 'URGENT' ? <AlertTriangle size={24} /> : <Clock size={24} />}
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[9px] font-black uppercase tracking-widest px-3">+{task.xpValue} XP</Badge>
-                          <CheckCircle2 size={28} className="text-muted/30 group-hover:text-primary transition-all duration-500" />
-                        </div>
-                      </div>
-                      <h4 className="text-xl font-black text-foreground mb-2 leading-tight group-hover:text-primary transition-colors">{task.title}</h4>
-                      <div className="flex items-center gap-3">
-                         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">{courses.find(c => c.id === task.courseId)?.code}</span>
-                         <div className="w-1 h-1 bg-border rounded-full" />
-                         <span className="text-[10px] font-black text-destructive uppercase tracking-[0.2em]">{t('dashboard.priorityHigh')}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="courses" className="space-y-6 outline-none">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {courses.map(course => (
-                  <Card 
-                    key={course.id} 
-                    className="hover:border-primary/30 transition-all border-border/50 group bg-card/40 cursor-pointer"
-                    onClick={() => navigate('/courses')}
-                  >
-                    <CardContent className="p-8 space-y-6">
-                      <div className="flex justify-between items-center">
-                        <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 uppercase font-black text-[10px] tracking-widest px-4 py-1 rounded-lg">{course.code}</Badge>
-                        <div className="flex flex-col items-end">
-                           <span className="text-2xl font-black text-foreground tabular-nums tracking-tighter">{course.percentage}%</span>
-                           <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Mastery Level</span>
-                        </div>
-                      </div>
-                      <h4 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors leading-tight">{course.name}</h4>
-                      <div className="space-y-2">
-                         <div className="h-2 w-full bg-muted rounded-full overflow-hidden shadow-inner">
-                           <motion.div 
-                             className="h-full bg-gradient-to-r from-primary to-violet-500"
-                             initial={{ width: 0 }}
-                             animate={{ width: `${course.percentage}%` }}
-                             transition={{ duration: 1.5, ease: "circOut" }}
-                           />
-                         </div>
-                         <div className="flex justify-between text-[9px] font-black text-muted-foreground uppercase tracking-widest">
-                            <span>{t('dashboard.stability')}</span>
-                            <span className="text-emerald-500">{t('dashboard.trendingUp')}</span>
-                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
+          ))}
         </div>
 
-        {/* Sidebar Insights */}
-        <div className="col-span-12 lg:col-span-4 space-y-10">
-          
-          <Card className="bg-primary/5 border-primary/20 relative overflow-hidden group shadow-2xl shadow-primary/5">
-            <div className="absolute -top-12 -right-12 opacity-5 group-hover:opacity-10 transition-all duration-1000 group-hover:scale-110">
-              <Brain size={240} className="text-primary" />
-            </div>
-            <CardHeader>
-              <CardTitle className="text-sm font-black uppercase tracking-[0.2em] flex items-center gap-3 text-primary">
-                <Brain size={20} className="fill-current" />
-                {t('dashboard.neuralInsight')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-10 relative z-10">
-              <div className="space-y-4">
-                 <p className="text-2xl font-black leading-[1.3] text-foreground tracking-tight">
-                    {t('dashboard.cognitiveDecay')}
-                 </p>
-                 <p className="text-muted-foreground font-medium leading-relaxed italic border-l-2 border-primary/30 pl-6">
-                    {t('dashboard.syllabusSync')}
-                 </p>
+        <div className="flex items-center gap-1.5 text-[10px] font-black text-emerald-500">
+          <TrendingUp size={12} /> Trending Up
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Cognitive Matrix ────────────────────────────────────────────────────────
+const CognitiveMatrix: React.FC = () => {
+  const { courses, dailyGoals } = useStore();
+  const navigate = useNavigate();
+
+  const stats = [
+    { label: 'Deep Work', val: 82, icon: <Target size={15} />, route: '/focus', status: 'Optimal' },
+    { label: 'Persistence', val: 94, icon: <Zap size={15} />, route: '/analytics', status: 'Peak' },
+    { label: 'Retention', val: 78, icon: <Brain size={15} />, route: '/courses', status: 'Stable' },
+  ];
+
+  const goalsPercent = Math.round((dailyGoals.completed / Math.max(dailyGoals.total, 1)) * 100);
+
+  return (
+    <div className="space-y-5">
+      {/* Daily goals */}
+      <div className="p-4 rounded-xl space-y-3" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)' }}>
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Daily Goals</span>
+          <span className="text-sm font-black" style={{ color: '#10B981' }}>{dailyGoals.completed}/{dailyGoals.total}</span>
+        </div>
+        <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${goalsPercent}%` }}
+            transition={{ duration: 1.2, ease: 'circOut' }}
+            className="h-full rounded-full"
+            style={{ background: 'linear-gradient(90deg, #10B981, #06B6D4)' }}
+          />
+        </div>
+      </div>
+
+      {/* Stat rows */}
+      {stats.map((stat, i) => (
+        <motion.div
+          key={stat.label}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: i * 0.1 }}
+          onClick={() => navigate(stat.route)}
+          className="flex flex-col gap-2.5 cursor-pointer group"
+        >
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                {stat.icon}
               </div>
-              <Button 
-                className="w-full h-14 font-black uppercase tracking-[0.2em] text-[10px] gap-3 shadow-xl shadow-primary/20 rounded-xl group/btn"
-                onClick={handleRecalibrate}
-              >
-                {t('dashboard.recalibrate')}
-                <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
-              </Button>
-            </CardContent>
-          </Card>
+              <div>
+                <p className="text-sm font-black text-foreground group-hover:text-primary transition-colors">{stat.label}</p>
+                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{stat.status}</p>
+              </div>
+            </div>
+            <span className="text-xl font-black tabular-nums" style={{ color: '#7C3AED' }}>{stat.val}%</span>
+          </div>
+          <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${stat.val}%` }}
+              transition={{ duration: 1.2, delay: i * 0.15, ease: 'circOut' }}
+              className="h-full rounded-full group-hover:opacity-100 opacity-60 transition-opacity"
+              style={{ background: 'linear-gradient(90deg, #7C3AED, #A78BFA)' }}
+            />
+          </div>
+        </motion.div>
+      ))}
 
-          <Card className="border-border/50 bg-card/50">
-            <CardHeader>
-              <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em] flex items-center gap-2">
-                 <Activity size={14} className="text-primary" />
-                 {t('dashboard.cognitiveMatrix')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-8">
-              {[
-                { label: t('dashboard.deepWork'), val: '82%', color: 'text-primary', icon: <Target size={18} />, status: 'Optimal', path: '/focus' },
-                { label: t('dashboard.persistence'), val: '94%', color: 'text-primary', icon: <Zap size={18} />, status: 'Peak', path: '/analytics' },
-                { label: t('dashboard.retention'), val: '78%', color: 'text-primary', icon: <Brain size={18} />, status: 'Stable', path: '/courses' }
-              ].map((stat, i) => (
-                <div key={i} className="flex flex-col gap-4 group cursor-pointer" onClick={() => navigate(stat.path)}>
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-muted/50 border border-border/50 flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:border-primary/20 transition-all duration-300">
-                        {stat.icon}
-                      </div>
-                      <div className="space-y-0.5">
-                        <span className="text-sm font-black text-foreground group-hover:text-primary transition-colors">{stat.label}</span>
-                        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{stat.status}</p>
-                      </div>
-                    </div>
-                    <span className={cn("text-2xl font-black tabular-nums tracking-tighter", stat.color)}>{stat.val}</span>
-                  </div>
-                  <Progress value={parseInt(stat.val)} className="h-1 bg-muted/50" indicatorClassName="bg-primary/40 group-hover:bg-primary transition-all duration-500" />
+      {/* Course mastery */}
+      <div className="pt-2 border-t border-white/5 space-y-3">
+        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Course Mastery</span>
+        {courses.slice(0, 2).map(c => (
+          <div key={c.id} className="flex items-center gap-3 group cursor-pointer" onClick={() => navigate('/courses')}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black"
+              style={{ background: 'rgba(124,58,237,0.12)', color: '#A78BFA', border: '1px solid rgba(124,58,237,0.2)' }}>
+              {c.code.slice(0, 2)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">{c.name}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${c.percentage}%` }}
+                    transition={{ duration: 1.2, ease: 'circOut' }}
+                    className="h-full rounded-full"
+                    style={{ background: c.percentage >= 90 ? '#10B981' : c.percentage >= 75 ? '#7C3AED' : '#F59E0B' }}
+                  />
                 </div>
-              ))}
-            </CardContent>
-          </Card>
+                <span className="text-[9px] font-black shrink-0" style={{ color: '#A78BFA' }}>{c.percentage}%</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
-          <Card className="border-border/50 bg-card/20 backdrop-blur-xl group hover:border-emerald-500/30 transition-all cursor-pointer" onClick={() => navigate('/settings')}>
-             <CardContent className="p-10 flex items-center gap-8">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 group-hover:scale-110 transition-transform">
-                   <ShieldCheck size={32} />
-                </div>
-                <div className="space-y-1">
-                   <h4 className="text-xl font-black text-foreground">{t('dashboard.integrityVerified')}</h4>
-                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{t('dashboard.workspaceSecured')}</p>
-                </div>
-             </CardContent>
-          </Card>
+// ─── Quick Actions ──────────────────────────────────────────────────────────
+const QuickActions: React.FC = () => {
+  const navigate = useNavigate();
+  const { startFocusSession, pushToast } = useStore();
+
+  const actions = [
+    { icon: <Zap size={18} />, label: 'Focus Room', color: '#7C3AED', bg: 'rgba(124,58,237,0.12)', route: '/focus', fn: () => { startFocusSession(); pushToast({ type: 'focus', title: 'Focus Session Started' }); } },
+    { icon: <Brain size={18} />, label: 'AI Tutor', color: '#06B6D4', bg: 'rgba(6,182,212,0.12)', route: '/tutor' },
+    { icon: <BarChart3 size={18} />, label: 'Analytics', color: '#10B981', bg: 'rgba(16,185,129,0.12)', route: '/analytics' },
+    { icon: <BookOpen size={18} />, label: 'Courses', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', route: '/courses' },
+    { icon: <Calendar size={18} />, label: 'Planner', color: '#A78BFA', bg: 'rgba(167,139,250,0.12)', route: '/planner' },
+    { icon: <BarChart2 size={18} />, label: 'Exams', color: '#EF4444', bg: 'rgba(239,68,68,0.12)', route: '/exams' },
+  ];
+
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {actions.map((a, i) => (
+        <motion.button
+          key={a.label}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: i * 0.05 }}
+          onClick={() => { a.fn?.(); navigate(a.route); }}
+          className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all hover:scale-105 active:scale-95 group"
+          style={{ background: a.bg, border: `1px solid ${a.color}20` }}
+        >
+          <span style={{ color: a.color }} className="group-hover:scale-110 transition-transform">{a.icon}</span>
+          <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">{a.label}</span>
+        </motion.button>
+      ))}
+    </div>
+  );
+};
+
+// ─── System Health Bar ───────────────────────────────────────────────────────
+const SystemHealthBar: React.FC = () => {
+  const { productivityState, aiActivityStatus, activeFocusSession } = useStore();
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const i = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(i);
+  }, []);
+
+  const stateColor = { PEAK: '#10B981', NORMAL: '#7C3AED', BURNOUT_RISK: '#F59E0B', RECOVERING: '#06B6D4' }[productivityState] ?? '#7C3AED';
+  const stateLabel = { PEAK: 'Peak Mode', NORMAL: 'Nominal', BURNOUT_RISK: 'Risk Detected', RECOVERING: 'Recovering' }[productivityState] ?? 'Nominal';
+
+  return (
+    <div className="flex items-center justify-between flex-wrap gap-3 px-1">
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: stateColor, boxShadow: `0 0 8px ${stateColor}` }} />
+        <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: stateColor }}>{stateLabel}</span>
+      </div>
+      <div className="flex items-center gap-4 text-[10px] font-bold text-muted-foreground">
+        <span className="flex items-center gap-1.5"><Cpu size={11} /> {aiActivityStatus === 'active' ? 'AI Online' : 'AI Processing...'}</span>
+        <span className="flex items-center gap-1.5"><ShieldCheck size={11} className="text-emerald-500" /> Integrity OK</span>
+        <span className="flex items-center gap-1.5"><Activity size={11} />{activeFocusSession ? 'Focus Active' : 'Standby'}</span>
+        <span className="text-muted-foreground/40 tabular-nums">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Dashboard ──────────────────────────────────────────────────────────
+export const AdaptiveDashboard: React.FC = () => {
+  const { aiMemory } = useStore();
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
+
+  return (
+    <div className="max-w-[1600px] mx-auto pb-24 space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+      <ToastSystem />
+
+      {/* Live Status Ticker */}
+      <StatusTicker />
+
+      {/* System Health Bar */}
+      <SystemHealthBar />
+
+      {/* Hero Header */}
+      <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row justify-between items-start gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <Badge className="px-3 py-1 text-[10px] font-black uppercase tracking-widest gap-2"
+              style={{ background: 'rgba(124,58,237,0.12)', color: '#A78BFA', border: '1px solid rgba(124,58,237,0.2)' }}>
+              <Brain size={12} className="animate-pulse" /> OS Command Center
+            </Badge>
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-black heading-os tracking-tight text-foreground leading-[1.1]">
+            {aiMemory.burnoutRisk > 40 ? 'Rest & Recover,' : 'Mission Control,'}{' '}
+            <span style={{ background: 'linear-gradient(90deg, #7C3AED, #A78BFA, #06B6D4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              Tareq
+            </span>
+          </h1>
+          <p className="text-muted-foreground text-base font-medium max-w-xl leading-relaxed">
+            AI Efficiency at <span className="font-black text-primary">{aiMemory.productivityScore}%</span>. Your academic systems are synchronized and active.
+          </p>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="w-full sm:w-auto">
+          <QuickActions />
+        </div>
+      </motion.div>
+
+      {/* Daily Forecast */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <DailyForecast />
+      </motion.div>
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-12 gap-5">
+        {/* Left Column — 8 wide */}
+        <div className="col-span-12 xl:col-span-8 space-y-5">
+          {/* Cognitive Heatmap */}
+          <Panel delay={0.15}>
+            <CognitiveHeatmap />
+          </Panel>
+
+          {/* High-Impact Task Engine */}
+          <Panel delay={0.2}>
+            <TaskEngine />
+          </Panel>
+        </div>
+
+        {/* Right Column — 4 wide */}
+        <div className="col-span-12 xl:col-span-4 space-y-5">
+          {/* XP Rank Engine */}
+          <Panel delay={0.15}>
+            <XPRankEngine />
+          </Panel>
+
+          {/* Neural Insights */}
+          <Panel delay={0.25}>
+            <NeuralInsightPanel />
+          </Panel>
+
+          {/* Cognitive Matrix */}
+          <Panel delay={0.3}>
+            <CognitiveMatrix />
+          </Panel>
         </div>
       </div>
     </div>

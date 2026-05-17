@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Check, Trash2, Info, AlertTriangle, Zap } from 'lucide-react';
+import { Bell, Check, Info, AlertTriangle, Zap } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 

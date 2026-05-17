@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Plus, Search, MoreVertical } from 'lucide-react';
+import { FileText, Plus, MoreVertical } from 'lucide-react';
 import { Card } from '../components/ui/card';
 
 export const NotesPage: React.FC = () => {

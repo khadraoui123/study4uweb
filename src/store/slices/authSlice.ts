@@ -35,7 +35,7 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set) => ({
     gpa: 3.92,
   },
   isAuthenticated: true,
-  login: (email) => set({ isAuthenticated: true }),
+  login: (_email: string) => set({ isAuthenticated: true }),
   logout: () => set({ user: null, isAuthenticated: false }),
   updateProfile: (update) => set((state) => ({
     user: state.user ? { ...state.user, ...update } : null
