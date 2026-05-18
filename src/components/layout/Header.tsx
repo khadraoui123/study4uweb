@@ -27,6 +27,7 @@ import { useNavigate } from 'react-router-dom';
 export const Header: React.FC<HeaderProps> = React.memo(({ onMenuClick }) => {
   const level = useStore(state => state.level);
   const streak = useStore(state => state.streak);
+  const user = useStore(state => state.user);
   
   const navigate = useNavigate();
   const { i18n } = useTranslation();
@@ -137,7 +138,7 @@ export const Header: React.FC<HeaderProps> = React.memo(({ onMenuClick }) => {
               onClick={() => navigate('/profile')}
             >
                <div className="text-right hidden xl:block">
-                  <p className="text-sm font-black text-foreground uppercase tracking-tighter leading-none mb-1 group-hover:text-primary transition-colors">Tareq Ahmed</p>
+                   <p className="text-sm font-black text-foreground uppercase tracking-tighter leading-none mb-1 group-hover:text-primary transition-colors">{user?.name || 'User'}</p>
                   <div className="flex items-center justify-end gap-1.5">
                      <ShieldCheck size={12} className="text-emerald-500" />
                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] leading-none">Authorized</p>
@@ -145,8 +146,8 @@ export const Header: React.FC<HeaderProps> = React.memo(({ onMenuClick }) => {
                </div>
                <div className="relative">
                   <Avatar className="w-12 h-12 border-2 border-primary/30 group-hover:border-primary transition-all duration-500 shadow-xl">
-                     <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=Tareq" />
-                     <AvatarFallback>TA</AvatarFallback>
+                     <AvatarImage src={user?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=Tareq"} />
+                     <AvatarFallback>{user?.name ? user.name.substring(0, 2).toUpperCase() : "US"}</AvatarFallback>
                   </Avatar>
                   <motion.div 
                     animate={{ scale: [1, 1.2, 1], opacity: [1, 0, 1] }}

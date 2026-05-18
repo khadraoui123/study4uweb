@@ -97,7 +97,7 @@ export const AIChat: React.FC = () => {
                   }`}>
                     {msg.content}
                     <div className="mt-4 flex justify-between items-center opacity-40">
-                       <span className="text-[10px] font-black uppercase tracking-widest">{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">{new Date(msg.createdAt || msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
                 </div>
@@ -145,7 +145,7 @@ export const AIChat: React.FC = () => {
                  value={input}
                  onChange={(e) => setInput(e.target.value)}
                  onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                 placeholder="Message StudyMate OS..."
+                 placeholder="Message Study4u OS..."
                  className="flex-1 bg-transparent border-none py-4 px-4 text-white font-medium placeholder:text-slate-600 focus:outline-none"
                />
                <button 

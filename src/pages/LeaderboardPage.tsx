@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Medal, Crown, Star, TrendingUp, Users, ArrowUpRight } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
@@ -8,6 +8,16 @@ import { cn } from "@/lib/utils";
 
 export const LeaderboardPage: React.FC = () => {
   const { leaderboard } = useStore();
+
+  const loadLeaderboard = useStore(state => state.loadLeaderboard);
+  const loadFriends = useStore(state => state.loadFriends);
+  const loadProfile = useStore(state => state.loadProfile);
+
+  useEffect(() => {
+    loadLeaderboard?.();
+    loadFriends?.();
+    loadProfile?.();
+  }, []);
   const leaders = leaderboard || [];
 
   return (

@@ -25,6 +25,16 @@ import { cn } from "@/lib/utils";
 
 export const AIChat: React.FC = () => {
   const { chatHistory, sendMessage, addAssistantMessage, aiMemory, tasks, courses, exams } = useStore();
+
+  const loadChatHistory = useStore(state => state.loadChatHistory);
+  const loadMemory = useStore(state => state.loadMemory);
+  const loadSuggestions = useStore(state => state.loadSuggestions);
+
+  useEffect(() => {
+    loadChatHistory?.();
+    loadMemory?.();
+    loadSuggestions?.();
+  }, []);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -272,7 +282,7 @@ export const AIChat: React.FC = () => {
                          </div>
                          <div className={cn("flex items-center gap-3 px-2", msg.role === 'user' ? "justify-end" : "justify-start")}>
                             <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
-                              {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(msg.createdAt || msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                             <div className="w-1 h-1 rounded-full bg-muted-foreground/20" />
                             <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">

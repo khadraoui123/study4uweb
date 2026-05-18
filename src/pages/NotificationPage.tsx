@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Bell, Check, Info, AlertTriangle, Zap } from 'lucide-react';
 import { Card } from '../components/ui/card';
@@ -8,6 +8,12 @@ import { useStore } from '../store';
 
 export const NotificationPage: React.FC = () => {
   const { notifications, markAllRead, clearNotification } = useStore();
+
+  const loadNotifications = useStore(state => state.loadNotifications);
+
+  useEffect(() => {
+    loadNotifications?.();
+  }, []);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -43,7 +49,7 @@ export const NotificationPage: React.FC = () => {
           </div>
         ) : (
           notifications.map((n, i) => {
-            const Icon = getIcon(n.iconType);
+            const Icon = getIcon(n.iconType || 'info');
             return (
               <motion.div
                 key={n.id}

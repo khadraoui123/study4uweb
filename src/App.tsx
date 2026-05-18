@@ -6,9 +6,10 @@ import { Header } from './components/layout/Header';
 import { Trophy, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './components/ui/button';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { LoginPage } from './pages/auth/LoginPage';
+import { RegisterPage } from './pages/auth/RegisterPage';
 
-// Lazy load feature modules
 const AdaptiveDashboard = React.lazy(() => import('./features/dashboard/AdaptiveHome').then(m => ({ default: m.AdaptiveDashboard })));
 const AIChat = React.lazy(() => import('./features/ai/AIStudyAssistant').then(m => ({ default: m.AIChat })));
 const FocusRoom = React.lazy(() => import('./features/focus-room/FocusRoom').then(m => ({ default: m.FocusRoom })));
@@ -37,13 +38,13 @@ const NeuralLoader = () => (
 );
 
 const LevelUpCelebration: React.FC<{ level: number; onClose: () => void }> = ({ level, onClose }) => (
-  <motion.div 
+  <motion.div
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
     className="fixed inset-0 z-[500] flex items-center justify-center bg-black/90 backdrop-blur-3xl p-6"
   >
-    <motion.div 
+    <motion.div
       initial={{ scale: 0.5, y: 100, rotate: -10 }}
       animate={{ scale: 1, y: 0, rotate: 0 }}
       transition={{ type: "spring", stiffness: 260, damping: 20 }}
@@ -55,8 +56,8 @@ const LevelUpCelebration: React.FC<{ level: number; onClose: () => void }> = ({ 
            <Trophy size={64} className="text-white fill-white/20" />
         </div>
         <div>
-           <motion.h2 
-             animate={{ scale: [1, 1.1, 1] }} 
+           <motion.h2
+             animate={{ scale: [1, 1.1, 1] }}
              transition={{ repeat: Infinity, duration: 2 }}
              className="text-5xl font-black heading-os text-foreground"
            >
@@ -65,7 +66,7 @@ const LevelUpCelebration: React.FC<{ level: number; onClose: () => void }> = ({ 
            <p className="text-primary text-2xl font-black mt-2 tracking-widest uppercase">Rank: Scholar Grade {level}</p>
         </div>
         <p className="text-muted-foreground text-lg font-medium">Your neural capacity has expanded. New focus protocols have been decrypted in your workspace.</p>
-        <Button 
+        <Button
           onClick={onClose}
           size="lg"
           className="px-12 py-7 text-lg font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/30"
@@ -78,56 +79,22 @@ const LevelUpCelebration: React.FC<{ level: number; onClose: () => void }> = ({ 
   </motion.div>
 );
 
-const App: React.FC = () => {
-  const checkStreak = useStore(state => state.checkStreak);
-  const level = useStore(state => state.level);
-  const simulateCognitiveDecay = useStore(state => state.simulateCognitiveDecay);
-  
-  const [showLevelUp, setShowLevelUp] = useState(false);
-  const [lastLevel, setLastLevel] = useState(level);
+function AppLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const location = useLocation();
-
-  useEffect(() => {
-    if (checkStreak) checkStreak();
-    
-    // Cognitive Decay Simulation: Mastery drops slightly every 30 seconds
-    const decayInterval = setInterval(() => {
-      if (simulateCognitiveDecay) simulateCognitiveDecay();
-    }, 30000);
-    
-    return () => clearInterval(decayInterval);
-  }, [checkStreak, simulateCognitiveDecay]);
-
-  useEffect(() => {
-    if (level > lastLevel) {
-      setShowLevelUp(true);
-      setLastLevel(level);
-    }
-  }, [level, lastLevel]);
-
   const sidebarWidth = isSidebarCollapsed ? '80px' : '280px';
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 
   return (
-    <div 
-      className="min-h-screen bg-background selection:bg-primary/30 selection:text-primary transition-all duration-300"
-      style={{ '--sidebar-width': sidebarWidth } as React.CSSProperties}
-    >
-      <div className="ambient-bg" />
-      
-      <Sidebar 
-        isCollapsed={isSidebarCollapsed} 
-      />
-      
+    <>
+      <Sidebar isCollapsed={isSidebarCollapsed} />
       <Header onMenuClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
-      
-      <main 
+      <main
         className="transition-all duration-300 pt-[70px] min-h-screen"
-        style={{ 
+        style={{
           marginLeft: isRTL ? '0' : sidebarWidth,
-          marginRight: isRTL ? sidebarWidth : '0'
+          marginRight: isRTL ? sidebarWidth : '0',
         }}
       >
         <AnimatePresence mode="wait">
@@ -140,31 +107,98 @@ const App: React.FC = () => {
             className="p-8"
           >
             <React.Suspense fallback={<NeuralLoader />}>
-              <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<AdaptiveDashboard />} />
-              <Route path="/tutor" element={<AIChat />} />
-              <Route path="/focus" element={<FocusRoom />} />
-              <Route path="/courses" element={<AcademicMatrix />} />
-              <Route path="/tasks" element={<SmartTaskSystem />} />
-              <Route path="/planner" element={<DynamicPlanner />} />
-              <Route path="/analytics" element={<NeuralAnalytics />} />
-              <Route path="/achievements" element={<AchievementSystem />} />
-              <Route path="/social" element={<StudySocial />} />
-              <Route path="/exams" element={<ExamMode />} />
-              <Route path="/calendar" element={<CalendarPage />} />
-              <Route path="/notes" element={<NotesPage />} />
-              <Route path="/leaderboards" element={<LeaderboardPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/notifications" element={<NotificationPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </React.Suspense>
+              <Outlet />
+            </React.Suspense>
           </motion.div>
         </AnimatePresence>
       </main>
+    </>
+  );
+}
 
+const App: React.FC = () => {
+  const isAuthenticated = useStore(state => state.isAuthenticated);
+  const initializeApp = useStore(state => state.initializeApp);
+  const checkStreak = useStore(state => state.checkStreak);
+  const level = useStore(state => state.level);
+  const simulateCognitiveDecay = useStore(state => state.simulateCognitiveDecay);
+  const logout = useStore(state => state.logout);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [lastLevel, setLastLevel] = useState(level);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Clear any existing session upon initial mount to guarantee login page is the first page
+  useEffect(() => {
+    logout();
+    if (location.pathname === '/register') {
+      navigate('/login', { replace: true });
+    }
+  }, [logout]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      setIsInitialized(false);
+      initializeApp().finally(() => setIsInitialized(true));
+    } else {
+      setIsInitialized(true);
+    }
+  }, [isAuthenticated, initializeApp]);
+
+  useEffect(() => {
+    if (checkStreak) checkStreak();
+    const decayInterval = setInterval(() => {
+      if (simulateCognitiveDecay) simulateCognitiveDecay();
+    }, 30000);
+    return () => clearInterval(decayInterval);
+  }, [checkStreak, simulateCognitiveDecay]);
+
+  useEffect(() => {
+    if (level > lastLevel) {
+      setShowLevelUp(true);
+      setLastLevel(level);
+    }
+  }, [level, lastLevel]);
+
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 size={48} className="text-primary animate-spin mx-auto" />
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground animate-pulse mt-4">Initializing Neural Interface...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background selection:bg-primary/30 selection:text-primary transition-all duration-300">
+      <div className="ambient-bg" />
+      <Routes>
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+        <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <RegisterPage />} />
+        <Route element={isAuthenticated ? <AppLayout /> : <Navigate to="/login" replace />}>
+          <Route path="/dashboard" element={<AdaptiveDashboard />} />
+          <Route path="/tutor" element={<AIChat />} />
+          <Route path="/focus" element={<FocusRoom />} />
+          <Route path="/courses" element={<AcademicMatrix />} />
+          <Route path="/tasks" element={<SmartTaskSystem />} />
+          <Route path="/planner" element={<DynamicPlanner />} />
+          <Route path="/analytics" element={<NeuralAnalytics />} />
+          <Route path="/achievements" element={<AchievementSystem />} />
+          <Route path="/social" element={<StudySocial />} />
+          <Route path="/exams" element={<ExamMode />} />
+          <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/notes" element={<NotesPage />} />
+          <Route path="/leaderboards" element={<LeaderboardPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/notifications" element={<NotificationPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Route>
+      </Routes>
       <AnimatePresence>
         {showLevelUp && <LevelUpCelebration level={level} onClose={() => setShowLevelUp(false)} />}
       </AnimatePresence>
@@ -173,5 +207,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
-

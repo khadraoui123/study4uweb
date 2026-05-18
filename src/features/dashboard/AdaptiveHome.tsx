@@ -342,6 +342,30 @@ const SystemHealthBar: React.FC = React.memo(() => {
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 export const AdaptiveDashboard: React.FC = () => {
   const aiMemory = useStore(state => state.aiMemory);
+  const loadCourses = useStore(state => state.loadCourses);
+  const loadTasks = useStore(state => state.loadTasks);
+  const loadExams = useStore(state => state.loadExams);
+  const loadStats = useStore(state => state.loadStats);
+  const loadProfile = useStore(state => state.loadProfile);
+  const loadAchievements = useStore(state => state.loadAchievements);
+  const loadMemory = useStore(state => state.loadMemory);
+  const loadFriends = useStore(state => state.loadFriends);
+  const loadLeaderboard = useStore(state => state.loadLeaderboard);
+  const loadNotifications = useStore(state => state.loadNotifications);
+
+  useEffect(() => {
+    loadCourses?.();
+    loadTasks?.();
+    loadExams?.();
+    loadStats?.();
+    loadProfile?.();
+    loadAchievements?.();
+    loadMemory?.();
+    loadFriends?.();
+    loadLeaderboard?.();
+    loadNotifications?.();
+  }, []);
+
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 

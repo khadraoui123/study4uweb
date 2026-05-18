@@ -1,5 +1,5 @@
-import React from 'react';
-// No store import needed here if not used
+import React, { useEffect } from 'react';
+import { useStore } from '../../store';
 import { Users, Trophy, Zap, MessageSquare, ChevronRight, Crown, Flame } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,14 @@ const leaderboard = [
 ];
 
 export const StudySocial: React.FC = () => {
+  const loadFriends = useStore(state => state.loadFriends);
+  const loadLeaderboard = useStore(state => state.loadLeaderboard);
+
+  useEffect(() => {
+    loadFriends?.();
+    loadLeaderboard?.();
+  }, []);
+
   return (
     <div className="space-y-10 max-w-7xl mx-auto pb-20">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">

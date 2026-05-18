@@ -85,7 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({ isCollapsed }) => {
                   exit={{ opacity: 0, x: -10 }}
                   className="flex flex-col"
                 >
-                  <span className="font-black text-2xl heading-os tracking-tighter text-foreground leading-none">StudyMate</span>
+                  <span className="font-black text-2xl heading-os tracking-tighter text-foreground leading-none">Study4u</span>
                   <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mt-1">Neural OS</span>
                 </motion.div>
               )}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { 
@@ -27,6 +27,12 @@ import type { Note } from '../store/slices/noteSlice';
 
 export const NotesPage: React.FC = () => {
   const { notes, addNote, updateNote, deleteNote, courses, pushToast } = useStore();
+
+  const loadNotes = useStore(state => state.loadNotes);
+
+  useEffect(() => {
+    loadNotes?.();
+  }, []);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -267,7 +273,7 @@ export const NotesPage: React.FC = () => {
                    <CardTitle className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-2">
                       <Sparkles size={16} /> Neural Context
                    </CardTitle>
-                   <CardDescription className="text-[10px] font-bold uppercase tracking-widest mt-1">AI Conceptual associations</CardDescription>
+                    <p className="text-[10px] font-bold uppercase tracking-widest mt-1 text-muted-foreground">AI Conceptual associations</p>
                 </CardHeader>
                 <CardContent className="p-8 space-y-8">
                    <div className="space-y-4">

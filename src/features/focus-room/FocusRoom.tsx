@@ -48,6 +48,12 @@ export const FocusRoom: React.FC = () => {
     resolveEvent
   } = useStore();
 
+  const loadSession = useStore(state => state.loadSession);
+
+  useEffect(() => {
+    loadSession?.();
+  }, []);
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showStats, setShowStats] = useState(false);

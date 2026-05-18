@@ -1,0 +1,402 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  major         String?
+  year          String?
+  avatar        String?
+  rank          String   @default("Scholar Grade 1")
+  credits       Int      @default(0)
+  totalCredits  Int      @default(0)
+  gpa           Float    @default(0)
+  xp            Int      @default(0)
+  level         Int      @default(1)
+  streak        Int      @default(0)
+  totalFocusTime Int     @default(0)
+  lastActiveAt  DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  courses          Course[]
+  exams            Exam[]
+  performanceSnaps PerformanceSnapshot[]
+  tasks            Task[]
+  chatMessages     ChatMessage[]
+  aiMemory         AIMemory?
+  achievements     UserAchievement[]
+  calendarEvents   CalendarEvent[]
+  studySessions    StudySession[]
+  focusSessions    FocusSession[]
+  friendshipsInitiated  Friendship[] @relation("UserFriendships")
+  friendshipsReceived   Friendship[] @relation("UserFriends")
+  leaderboardEntries LeaderboardEntry[]
+  notifications    Notification[]
+  notes            Note[]
+  flashcards       Flashcard[]
+  uploadedDocs     UploadedDocument[]
+  dailyGoals       DailyGoal[]
+  plannerEvents    PlannerEvent[]
+  studyRoomMembers StudyRoomMember[]
+  messages         Message[]
+
+  @@map("users")
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  code        String
+  name        String
+  instructor  String?
+  schedule    String?
+  difficulty  Int      @default(5)
+  percentage  Float    @default(0)
+  currentGrade String?
+  room        String?
+  attendancePresent Int @default(0)
+  attendanceAbsent  Int @default(0)
+  attendanceLate    Int @default(0)
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks Task[]
+  exams Exam[]
+  notes Note[]
+  events CalendarEvent[]
+  plannerEvents PlannerEvent[]
+  flashcards Flashcard[]
+
+  @@map("courses")
+}
+
+model Exam {
+  id        String   @id @default(uuid())
+  title     String
+  date      DateTime
+  weight    Float    @default(0)
+  score     Float?
+  userId    String
+  courseId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("exams")
+}
+
+model PerformanceSnapshot {
+  id        String   @id @default(uuid())
+  date      DateTime @default(now())
+  score     Float
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("performance_snapshots")
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  dueDate     DateTime?
+  priority    Int      @default(2)
+  urgency     String   @default("NORMAL")
+  completed   Boolean  @default(false)
+  progress    Int      @default(0)
+  xpValue     Int      @default(50)
+  aiSuggested Boolean  @default(false)
+  courseId    String?
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tasks")
+}
+
+model Note {
+  id           String   @id @default(uuid())
+  title        String
+  content      String   @default("")
+  tags         String   @default("[]")
+  courseId     String?
+  userId       String
+  lastModified DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notes")
+}
+
+model CalendarEvent {
+  id                String   @id @default(uuid())
+  title             String
+  start             DateTime
+  end               DateTime
+  type              String   @default("study")
+  cognitiveIntensity String? @default("MEDIUM")
+  xpReward          Int      @default(0)
+  isAiGenerated     Boolean  @default(false)
+  status            String   @default("pending")
+  aiRecommendation  String?
+  linkedTaskId      String?
+  courseId          String?
+  userId            String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("calendar_events")
+}
+
+model PlannerEvent {
+  id        String   @id @default(uuid())
+  title     String
+  start     DateTime
+  end       DateTime
+  type      String   @default("study")
+  status    String   @default("pending")
+  courseId  String?
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("planner_events")
+}
+
+model FocusSession {
+  id         String   @id @default(uuid())
+  duration   Int      @default(1500)
+  isRunning  Boolean  @default(false)
+  isActive   Boolean  @default(false)
+  ambientSound String @default("none")
+  volume     Int      @default(50)
+  completed  Boolean  @default(false)
+  earnedXP   Int      @default(0)
+  userId     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("focus_sessions")
+}
+
+model StudySession {
+  id        String   @id @default(uuid())
+  duration  Int
+  timestamp DateTime @default(now())
+  subject   String?
+  efficiency Float   @default(0)
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("study_sessions")
+}
+
+model Achievement {
+  id          String   @id
+  title       String
+  description String
+  icon        String   @default("zap")
+  xpReward    Int      @default(100)
+
+  users UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(uuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  role      String
+  content   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+model AIMemory {
+  id              String   @id @default(uuid())
+  weakSubjects    String   @default("[]")
+  lastFocus       String?
+  productivityScore Int    @default(80)
+  burnoutRisk     Int      @default(10)
+  suggestedActions String  @default("[]")
+  userId          String   @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_memory")
+}
+
+model Friendship {
+  id        String   @id @default(uuid())
+  userId    String
+  friendId  String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+
+  initiator User @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
+  receiver  User @relation("UserFriends", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@map("friendships")
+}
+
+model LeaderboardEntry {
+  id      String @id @default(uuid())
+  score   Int    @default(0)
+  period  String @default("weekly")
+  userId  String
+  rank    Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, period])
+  @@map("leaderboard_entries")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  type      String   @default("info")
+  title     String
+  message   String?
+  read      Boolean  @default(false)
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Flashcard {
+  id           String   @id @default(uuid())
+  question     String
+  answer       String
+  courseId     String?
+  userId       String
+  mastery      Int      @default(0)
+  lastReviewed DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("flashcards")
+}
+
+model UploadedDocument {
+  id        String   @id @default(uuid())
+  filename  String
+  url       String
+  mimeType  String
+  size      Int      @default(0)
+  courseId  String?
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("uploaded_documents")
+}
+
+model DailyGoal {
+  id        String   @id @default(uuid())
+  completed Int      @default(0)
+  total     Int      @default(5)
+  date      DateTime @default(now())
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("daily_goals")
+}
+
+model StudyRoom {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members StudyRoomMember[]
+  messages Message[]
+
+  @@map("study_rooms")
+}
+
+model StudyRoomMember {
+  id        String   @id @default(uuid())
+  roomId    String
+  userId    String
+  role      String   @default("member")
+  joinedAt  DateTime @default(now())
+
+  room StudyRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@map("study_room_members")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  userId    String?
+  roomId    String
+  createdAt DateTime @default(now())
+
+  user User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  room StudyRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}

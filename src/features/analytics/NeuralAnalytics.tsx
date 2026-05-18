@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../../store';
 import { 
@@ -10,7 +10,8 @@ import {
   AlertCircle,
   ArrowUpRight,
   AlertTriangle,
-  Layers
+  Layers,
+  Sparkles
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -21,6 +22,14 @@ import { cn } from "@/lib/utils";
 
 export const NeuralAnalytics: React.FC = () => {
   const { aiMemory, performanceHistory, courses, tasks } = useStore();
+
+  const loadStats = useStore(state => state.loadStats);
+  const loadMemory = useStore(state => state.loadMemory);
+
+  useEffect(() => {
+    loadStats?.();
+    loadMemory?.();
+  }, []);
 
   const burnoutForecastData = useMemo(() => {
     // Generate simulated forecast data based on task urgency and density

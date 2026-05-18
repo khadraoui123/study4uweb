@@ -1,11 +1,18 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Award, BookOpen, Clock, Edit2, Share2 } from 'lucide-react';
+import { useStore } from '../store';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Progress } from '../components/ui/progress';
 
 export const ProfilePage: React.FC = () => {
+  const loadProfile = useStore(state => state.loadProfile);
+
+  useEffect(() => {
+    loadProfile?.();
+  }, []);
+
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-12">
       {/* Header Profile Card */}

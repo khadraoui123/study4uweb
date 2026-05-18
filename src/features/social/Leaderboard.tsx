@@ -216,4 +216,4 @@ export const Leaderboard: React.FC = () => {
   );
 };
 
-const cn = (...classes: any[]) => classes.filter(Boolean).join(' ');
+

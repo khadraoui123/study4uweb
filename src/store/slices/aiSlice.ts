@@ -4,7 +4,8 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  timestamp: number;
+  createdAt?: string;
+  timestamp?: number;
 }
 
 export interface AISlice {
@@ -17,33 +18,100 @@ export interface AISlice {
     focusHeatmap: number[];
     suggestedActions: string[];
   };
-  sendMessage: (content: string) => void;
+  isLoading: boolean;
+  loadChatHistory: () => Promise<void>;
+  loadMemory: () => Promise<void>;
+  sendMessage: (content: string) => Promise<void>;
+  updateMemory: (update: Partial<AISlice['aiMemory']>) => Promise<void>;
+  clearChat: () => Promise<void>;
+  loadSuggestions: () => Promise<void>;
   addAssistantMessage: (content: string) => void;
-  updateMemory: (update: Partial<AISlice['aiMemory']>) => void;
-  clearChat: () => void;
 }
 
 export const createAISlice: StateCreator<AISlice> = (set) => ({
-  chatHistory: [
-    { id: '1', role: 'assistant', content: "Neural Assistant online. How can I optimize your study path today?", timestamp: Date.now() }
-  ],
+  chatHistory: [],
   aiMemory: {
-    weakSubjects: ['Discrete Structures', 'Quantum Physics'],
-    lastFocus: 'Circuit Design',
-    productivityScore: 88,
-    burnoutRisk: 12,
+    weakSubjects: [],
+    lastFocus: '',
+    productivityScore: 80,
+    burnoutRisk: 10,
     focusHeatmap: [2, 5, 8, 12, 15, 10, 5, 3, 1, 0, 0, 0, 4, 8, 12, 18, 22, 25, 20, 15, 10, 8, 5, 2],
-    suggestedActions: ['Generate Circuit Quiz', 'Review Set Theory', 'Take a 15m Break']
+    suggestedActions: [],
   },
-  sendMessage: (content) => set((state) => ({
-    chatHistory: [...state.chatHistory, { id: Math.random().toString(), role: 'user', content, timestamp: Date.now() }]
-  })),
-  addAssistantMessage: (content) => set((state) => ({
-    chatHistory: [...state.chatHistory, { id: Math.random().toString(), role: 'assistant', content, timestamp: Date.now() }]
-  })),
-  updateMemory: (update) => set((state) => ({
-    aiMemory: { ...state.aiMemory, ...update }
-  })),
-  clearChat: () => set({ chatHistory: [] })
-});
+  isLoading: false,
 
+  loadChatHistory: async () => {
+    try {
+      const { aiApi } = await import('../../api/ai');
+      const messages = await aiApi.getMessages();
+      set({ chatHistory: messages });
+    } catch {}
+  },
+
+  loadMemory: async () => {
+    try {
+      const { aiApi } = await import('../../api/ai');
+      const memory = await aiApi.getMemory();
+      if (memory) {
+        set({
+          aiMemory: {
+            weakSubjects: memory.weakSubjects ? JSON.parse(memory.weakSubjects) : [],
+            lastFocus: memory.lastFocus || '',
+            productivityScore: memory.productivityScore || 80,
+            burnoutRisk: memory.burnoutRisk || 10,
+            focusHeatmap: [2, 5, 8, 12, 15, 10, 5, 3, 1, 0, 0, 0, 4, 8, 12, 18, 22, 25, 20, 15, 10, 8, 5, 2],
+            suggestedActions: memory.suggestedActions ? JSON.parse(memory.suggestedActions) : [],
+          },
+        });
+      }
+    } catch {}
+  },
+
+  sendMessage: async (content) => {
+    set({ isLoading: true });
+    try {
+      const { aiApi } = await import('../../api/ai');
+      const result = await aiApi.sendMessage(content);
+      set((state) => ({
+        chatHistory: [...state.chatHistory, result.user, result.assistant],
+        isLoading: false,
+      }));
+    } catch {
+      set({ isLoading: false });
+    }
+  },
+
+  updateMemory: async (update) => {
+    try {
+      const { aiApi } = await import('../../api/ai');
+      await aiApi.updateMemory(update);
+      set((state) => ({
+        aiMemory: { ...state.aiMemory, ...update },
+      }));
+    } catch {}
+  },
+
+  clearChat: async () => {
+    try {
+      const { aiApi } = await import('../../api/ai');
+      await aiApi.clearChat();
+      set({ chatHistory: [] });
+    } catch {}
+  },
+
+  loadSuggestions: async () => {
+    try {
+      const { aiApi } = await import('../../api/ai');
+      const suggestions = await aiApi.getSuggestions();
+      set((state) => ({
+        aiMemory: { ...state.aiMemory, suggestedActions: suggestions },
+      }));
+    } catch {}
+  },
+
+  addAssistantMessage: (content) => {
+    set((state) => ({
+      chatHistory: [...state.chatHistory, { id: Math.random().toString(), role: 'assistant', content, timestamp: Date.now() }],
+    }));
+  },
+});

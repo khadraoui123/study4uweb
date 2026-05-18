@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../store';
 import { 
@@ -27,6 +27,12 @@ import { cn } from "@/lib/utils";
 
 export const ExamMode: React.FC = () => {
   const { addXP, pushToast, courses } = useStore();
+
+  const loadExams = useStore(state => state.loadExams);
+
+  useEffect(() => {
+    loadExams?.();
+  }, []);
   const [activeTab, setActiveTab] = useState<'flashcards' | 'mock'>('flashcards');
   const [currentCard, setCurrentCard] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);

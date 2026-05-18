@@ -6,10 +6,10 @@ import { Check, X, Clock, AlertCircle } from 'lucide-react';
 export const Tracker: React.FC = () => {
   const { courses, logAttendance } = useStore();
 
-  const totalAttendance = courses.reduce((acc, c) => {
-    const total = c.attendance.present + c.attendance.absent + c.attendance.late;
-    return acc + (total > 0 ? (c.attendance.present / total) : 0);
-  }, 0) / courses.length;
+  const totalAttendance = courses.reduce((acc: number, c: any) => {
+    const total = c.attendancePresent + c.attendanceAbsent + c.attendanceLate;
+    return acc + (total > 0 ? (c.attendancePresent / total) : 0);
+  }, 0) / (courses.length || 1);
 
   const attendancePercent = Math.round(totalAttendance * 100);
   const isBelowThreshold = attendancePercent < 75;
@@ -60,9 +60,9 @@ export const Tracker: React.FC = () => {
 
       <div className="flex gap-4">
         {[
-          { label: 'Present', count: courses.reduce((acc, c) => acc + c.attendance.present, 0), color: '#16a34a', bg: '#f0fdf4' },
-          { label: 'Absent', count: courses.reduce((acc, c) => acc + c.attendance.absent, 0), color: '#dc2626', bg: '#fef2f2' },
-          { label: 'Late', count: courses.reduce((acc, c) => acc + c.attendance.late, 0), color: '#d97706', bg: '#fffbeb' }
+          { label: 'Present', count: courses.reduce((acc: number, c: any) => acc + (c.attendancePresent || 0), 0), color: '#16a34a', bg: '#f0fdf4' },
+          { label: 'Absent', count: courses.reduce((acc: number, c: any) => acc + (c.attendanceAbsent || 0), 0), color: '#dc2626', bg: '#fef2f2' },
+          { label: 'Late', count: courses.reduce((acc: number, c: any) => acc + (c.attendanceLate || 0), 0), color: '#d97706', bg: '#fffbeb' }
         ].map((stat) => (
           <fluent-card 
             key={stat.label} 

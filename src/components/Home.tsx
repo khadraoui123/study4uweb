@@ -102,7 +102,7 @@ export const Home: React.FC = () => {
                   </div>
                   <div className="text-right">
                     <span className="block text-sm font-bold" style={{ color: '#1E293B' }}>
-                      {Math.round((course.attendance.present / (course.attendance.present + course.attendance.absent + course.attendance.late || 1)) * 100)}%
+                      {Math.round((course.attendancePresent / (course.attendancePresent + course.attendanceAbsent + course.attendanceLate || 1)) * 100)}%
                     </span>
                     <span className="text-xs font-bold uppercase" style={{ fontSize: '10px', color: '#94A3B8' }}>Attend</span>
                   </div>

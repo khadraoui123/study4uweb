@@ -448,6 +448,12 @@ export const DynamicPlanner: React.FC = () => {
     recalculateDrift();
   }, []);
 
+  const loadEvents = useStore(state => state.loadEvents);
+
+  useEffect(() => {
+    loadEvents?.();
+  }, []);
+
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
     const task: Task = {
@@ -579,7 +585,7 @@ export const DynamicPlanner: React.FC = () => {
            {/* Left Sidebar: AI Controls & Time Drift */}
            <div className="col-span-12 lg:col-span-4 space-y-10">
               <AIAutoFillControls 
-                onAutoFill={() => autoFillSchedule(tasks, courses)} 
+                onAutoFill={() => autoFillSchedule()} 
                 isAiAnalyzing={isAiAnalyzing} 
                 courses={courses}
               />

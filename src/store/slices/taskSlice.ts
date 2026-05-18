@@ -1,87 +1,97 @@
 import { type StateCreator } from 'zustand';
+import { tasksApi } from '../../api/tasks';
 
 export interface Task {
   id: string;
   courseId: string;
   title: string;
   dueDate: string;
-  priority: 1 | 2 | 3; // 1: High, 2: Medium, 3: Low
+  priority: 1 | 2 | 3;
   urgency: 'URGENT' | 'NORMAL' | 'LOW';
   completed: boolean;
-  progress: number; // 0 to 100
+  progress: number;
   xpValue: number;
   aiSuggested?: boolean;
+  course?: { id: string; code: string; name: string };
 }
 
 export interface TaskSlice {
   tasks: Task[];
-  toggleTask: (id: string) => void;
-  updateTaskProgress: (id: string, progress: number) => void;
-  addTask: (task: Task) => void;
-  deleteTask: (id: string) => void;
+  isLoading: boolean;
+  loadTasks: () => Promise<void>;
+  toggleTask: (id: string) => Promise<void>;
+  updateTaskProgress: (id: string, progress: number) => Promise<void>;
+  addTask: (task: Partial<Task>) => Promise<void>;
+  updateTask: (id: string, data: Partial<Task>) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
   getAISuggestions: () => void;
 }
 
 export const createTaskSlice: StateCreator<any> = (set, get) => ({
-  tasks: [
-    { id: '1', courseId: '1', title: 'Submit Circuit Design Lab Manual', urgency: 'URGENT', priority: 1, completed: false, progress: 45, dueDate: '2026-05-18', xpValue: 150 },
-    { id: '2', courseId: '2', title: 'Read Chapter 4 Physics Workbook', urgency: 'NORMAL', priority: 2, completed: true, progress: 100, dueDate: '2026-05-15', xpValue: 50 },
-    { id: '3', courseId: '1', title: 'Practice Discrete Math Problems', urgency: 'NORMAL', priority: 1, completed: false, progress: 10, dueDate: '2026-05-20', xpValue: 200, aiSuggested: true }
-  ],
-  toggleTask: (id) => {
-    const task = get().tasks.find((t: any) => t.id === id);
-    if (!task) return;
+  tasks: [],
+  isLoading: false,
 
-    const becomingCompleted = !task.completed;
-    
-    set((state: any) => ({
-      tasks: state.tasks.map((t: any) => t.id === id ? { ...t, completed: becomingCompleted, progress: becomingCompleted ? 100 : t.progress } : t)
-    }));
+  loadTasks: async () => {
+    try {
+      const tasks = await tasksApi.getAll();
+      set({ tasks });
+    } catch {}
+  },
 
-    if (becomingCompleted) {
-      get().addXP(task.xpValue);
-      get().incrementCompletedToday();
-      get().incrementDailyGoal();
-      get().pushToast({
-        type: 'xp',
-        title: 'Task Synchronized',
-        body: `+${task.xpValue} XP earned for ${task.title}`,
-        xpAmount: task.xpValue
-      });
-      
-      // If it's a major task, maybe check for achievements
-      if (task.xpValue >= 200) {
-        get().incrementStreak();
+  toggleTask: async (id) => {
+    try {
+      const result = await tasksApi.toggle(id);
+      set((state: any) => ({
+        tasks: state.tasks.map((t: any) => t.id === id ? { ...t, ...result } : t),
+      }));
+      const task = get().tasks.find((t: any) => t.id === id);
+      if (task && !task.completed) {
+        get().addXP(task.xpValue);
+        get().incrementCompletedToday();
+        get().pushToast({
+          type: 'xp', title: 'Task Synchronized',
+          body: `+${task.xpValue} XP earned for ${task.title}`, xpAmount: task.xpValue,
+        });
       }
-    }
+    } catch {}
   },
-  updateTaskProgress: (id, progress) => {
-    const task = get().tasks.find((t: any) => t.id === id);
-    if (!task) return;
 
-    const wasCompleted = task.completed;
-    const isNowCompleted = progress === 100;
-
-    set((state: any) => ({
-      tasks: state.tasks.map((t: any) => t.id === id ? { ...t, progress, completed: isNowCompleted } : t)
-    }));
-
-    if (!wasCompleted && isNowCompleted) {
-      get().addXP(task.xpValue);
-      get().incrementCompletedToday();
-      get().incrementDailyGoal();
-      get().pushToast({
-        type: 'xp',
-        title: 'Task Complete',
-        body: `+${task.xpValue} XP earned`,
-        xpAmount: task.xpValue
-      });
-    }
+  updateTaskProgress: async (id, progress) => {
+    try {
+      const result = await tasksApi.updateProgress(id, progress);
+      set((state: any) => ({
+        tasks: state.tasks.map((t: any) => t.id === id ? { ...t, ...result } : t),
+      }));
+      const task = get().tasks.find((t: any) => t.id === id);
+      if (task && progress >= 100 && !task.completed) {
+        get().addXP(task.xpValue);
+        get().pushToast({ type: 'xp', title: 'Task Complete', body: `+${task.xpValue} XP earned`, xpAmount: task.xpValue });
+      }
+    } catch {}
   },
-  addTask: (task) => set((state: any) => ({ tasks: [...state.tasks, task] })),
-  deleteTask: (id) => set((state: any) => ({ tasks: state.tasks.filter((t: any) => t.id !== id) })),
-  getAISuggestions: () => {
-    // Logic to suggest tasks based on weak subjects
-  }
+
+  addTask: async (task) => {
+    try {
+      const created = await tasksApi.create(task);
+      set((state: any) => ({ tasks: [...state.tasks, created] }));
+    } catch {}
+  },
+
+  updateTask: async (id, data) => {
+    try {
+      const updated = await tasksApi.update(id, data);
+      set((state: any) => ({
+        tasks: state.tasks.map((t: any) => t.id === id ? { ...t, ...updated } : t),
+      }));
+    } catch {}
+  },
+
+  deleteTask: async (id) => {
+    try {
+      await tasksApi.delete(id);
+      set((state: any) => ({ tasks: state.tasks.filter((t: any) => t.id !== id) }));
+    } catch {}
+  },
+
+  getAISuggestions: () => {},
 });
-

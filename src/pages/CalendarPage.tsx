@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Clock, 
@@ -25,6 +25,12 @@ import type { CalendarEvent } from '../store/slices/plannerSlice';
 
 export const CalendarPage: React.FC = () => {
   const { events, exams, tasks, courses } = useStore();
+
+  const loadEvents = useStore(state => state.loadEvents);
+
+  useEffect(() => {
+    loadEvents?.();
+  }, []);
   const [currentDate, setCurrentDate] = useState(new Date(2026, 4, 17)); // May 2026
   const [view, setView] = useState<'month' | 'week'>('month');
 
@@ -35,7 +41,7 @@ export const CalendarPage: React.FC = () => {
   const year = currentDate.getFullYear();
 
   const calendarDays = useMemo(() => {
-    const days = [];
+    const days: { day: number; month: string; fullDate: Date }[] = [];
     const prevMonthLastDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0).getDate();
     
     // Previous month padding

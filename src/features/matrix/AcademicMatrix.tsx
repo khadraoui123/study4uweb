@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../../store';
 import type { Course } from '../../store/slices/academicSlice';
@@ -47,6 +47,16 @@ import { Modal } from "@/components/ui/modal";
 
 export const AcademicMatrix: React.FC = () => {
   const { courses, tasks, performanceHistory, addCourse, boostMastery, pushToast } = useStore();
+
+  const loadCourses = useStore(state => state.loadCourses);
+  const loadExams = useStore(state => state.loadExams);
+  const loadPerformance = useStore(state => state.loadPerformance);
+
+  useEffect(() => {
+    loadCourses?.();
+    loadExams?.();
+    loadPerformance?.();
+  }, []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [newCourse, setNewCourse] = useState({
@@ -59,13 +69,15 @@ export const AcademicMatrix: React.FC = () => {
 
   const handleAddCourse = (e: React.FormEvent) => {
     e.preventDefault();
-    const course: Course = {
+    const course: any = {
       id: Math.random().toString(),
       ...newCourse,
       difficulty: 5,
       percentage: 0,
       currentGrade: 'N/A',
-      attendance: { present: 0, absent: 0, late: 0 }
+      attendancePresent: 0,
+      attendanceAbsent: 0,
+      attendanceLate: 0,
     };
     addCourse(course);
     setIsModalOpen(false);
@@ -355,7 +367,7 @@ export const AcademicMatrix: React.FC = () => {
                   </Card>
                   <Card className="bg-muted/30 border-none p-6 space-y-2">
                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Attendance Sync</p>
-                     <p className="text-4xl font-black text-foreground">{Math.round((selectedCourse.attendance.present / (selectedCourse.attendance.present + selectedCourse.attendance.absent + selectedCourse.attendance.late || 1)) * 100)}%</p>
+                      <p className="text-4xl font-black text-foreground">{Math.round((selectedCourse.attendancePresent / (selectedCourse.attendancePresent + selectedCourse.attendanceAbsent + selectedCourse.attendanceLate || 1)) * 100)}%</p>
                   </Card>
                </div>
 

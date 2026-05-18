@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../../store';
 import { 
@@ -35,6 +35,14 @@ import {
 
 export const AchievementSystem: React.FC = () => {
   const { xp, level, achievements, streak, totalFocusTime } = useStore();
+
+  const loadProfile = useStore(state => state.loadProfile);
+  const loadAchievements = useStore(state => state.loadAchievements);
+
+  useEffect(() => {
+    loadProfile?.();
+    loadAchievements?.();
+  }, []);
 
   const nextLevelXP = (level + 1) * 1000;
   const progress = (xp / nextLevelXP) * 100;

@@ -1,37 +1,69 @@
 import { type StateCreator } from 'zustand';
+import { analyticsApi } from '../../api/analytics';
 
 export interface StudySession {
   id: string;
-  duration: number; // in minutes
+  duration: number;
   timestamp: string;
   subject: string;
-  efficiency: number; // 0-100
+  efficiency: number;
 }
 
 export interface AnalyticsSlice {
   sessions: StudySession[];
   dailyGoals: { completed: number; total: number };
-  weeklyProgress: number[]; // 7 values
-  addSession: (session: StudySession) => void;
-  updateGoal: (completed: number) => void;
-  incrementDailyGoal: () => void;
+  weeklyProgress: number[];
+  totalFocusMinutes: number;
+  totalXPEarned: number;
+  isLoading: boolean;
+  loadStats: () => Promise<void>;
+  addSession: (session: Partial<StudySession>) => void;
+  updateGoal: (completed: number) => Promise<void>;
+  incrementDailyGoal: () => Promise<void>;
 }
 
 export const createAnalyticsSlice: StateCreator<AnalyticsSlice> = (set) => ({
-  sessions: [
-    { id: 's1', duration: 45, timestamp: '2026-05-15T10:00:00', subject: 'Electrical Circuit Design', efficiency: 85 },
-    { id: 's2', duration: 60, timestamp: '2026-05-15T14:00:00', subject: 'Physics Mechanics', efficiency: 92 },
-  ],
-  dailyGoals: { completed: 3, total: 5 },
-  weeklyProgress: [4, 5, 3, 6, 4, 5, 2],
-  addSession: (session) => set((state) => ({ 
-    sessions: [...state.sessions, session],
-    weeklyProgress: state.weeklyProgress.map((v, i) => i === new Date().getDay() ? v + 1 : v)
+  sessions: [],
+  dailyGoals: { completed: 0, total: 5 },
+  weeklyProgress: [0, 0, 0, 0, 0, 0, 0],
+  totalFocusMinutes: 0,
+  totalXPEarned: 0,
+  isLoading: false,
+
+  loadStats: async () => {
+    try {
+      const stats = await analyticsApi.getStats();
+      set({
+        sessions: stats.sessions || [],
+        dailyGoals: stats.dailyGoals || { completed: 0, total: 5 },
+        weeklyProgress: stats.weeklyProgress || [0, 0, 0, 0, 0, 0, 0],
+        totalFocusMinutes: stats.totalFocusMinutes || 0,
+        totalXPEarned: stats.totalXPEarned || 0,
+      });
+    } catch {}
+  },
+
+  addSession: (session) => set((state) => ({
+    sessions: [...state.sessions, session as StudySession],
   })),
-  updateGoal: (completed) => set((state) => ({ 
-    dailyGoals: { ...state.dailyGoals, completed } 
-  })),
-  incrementDailyGoal: () => set((state) => ({ 
-    dailyGoals: { ...state.dailyGoals, completed: state.dailyGoals.completed + 1 } 
-  })),
+
+  updateGoal: async (completed) => {
+    try {
+      const goal = await analyticsApi.updateGoals({ completed });
+      set({ dailyGoals: { completed: goal.completed, total: goal.total } });
+    } catch {}
+  },
+
+  incrementDailyGoal: async () => {
+    try {
+      const goal = await analyticsApi.updateGoals({ completed: 0 });
+      set((state) => ({
+        dailyGoals: { ...state.dailyGoals, completed: state.dailyGoals.completed + 1 },
+      }));
+    } catch {
+      set((state) => ({
+        dailyGoals: { ...state.dailyGoals, completed: state.dailyGoals.completed + 1 },
+      }));
+    }
+  },
 });

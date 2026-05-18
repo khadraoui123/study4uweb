@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../store';
 import { 
@@ -35,6 +35,12 @@ import { cn } from "@/lib/utils";
 
 export const SmartTaskSystem: React.FC = () => {
   const { tasks, toggleTask, deleteTask, courses, pushToast, updateTaskProgress } = useStore();
+
+  const loadTasks = useStore(state => state.loadTasks);
+
+  useEffect(() => {
+    loadTasks?.();
+  }, []);
   const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'COMPLETED'>('ALL');
   const [view, setView] = useState<'LIST' | 'MATRIX'>('LIST');
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
